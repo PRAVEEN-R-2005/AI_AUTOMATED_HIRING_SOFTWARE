@@ -1,0 +1,77 @@
+body{
+    background:#F3F4F6;
+    font-family:'Poppins',sans-serif;
+}
+
+/* Cards */
+
+.card{
+    border:none;
+    border-radius:15px;
+    transition:0.4s;
+}
+
+.card:hover{
+
+    transform:translateY(-5px);
+
+    box-shadow:0px 8px 20px rgba(0,0,0,0.15);
+
+}
+
+
+/* Buttons */
+
+.btn{
+
+    transition:0.3s;
+
+    border-radius:10px;
+
+}
+
+.btn:hover{
+
+    transform:translateY(-3px);
+
+}
+
+
+/* Tables */
+
+.table{
+
+    border-radius:15px;
+
+    overflow:hidden;
+
+}
+
+
+/* Search box */
+
+.form-control{
+
+    border-radius:12px;
+
+}
+
+
+/* Progress bar */
+
+.progress{
+
+    height:20px;
+
+    border-radius:20px;
+
+}
+
+
+/* Badge */
+
+.badge{
+
+    font-size:14px;
+
+}
