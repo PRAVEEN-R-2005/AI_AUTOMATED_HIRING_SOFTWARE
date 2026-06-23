@@ -171,7 +171,7 @@ function MyApplications() {
                                                 <td>
 
                                                     <a
-    href={`http://localhost:5000/uploads/resumes/${app.resume_file}`}
+    href={`/uploads/resumes/${app.resume_file}`}
     target="_blank"
     rel="noreferrer"
     className="btn btn-danger"

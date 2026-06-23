@@ -188,7 +188,7 @@ function Applications() {
                                                 <span className={`badge bg-${getBadge(app.status)}`}>{app.status}</span>
                                             </div>
                                             <a
-    href={`http://localhost:5000/uploads/resumes/${app.resume_file}`}
+    href={`/uploads/resumes/${app.resume_file}`}
     target="_blank"
     rel="noreferrer"
     className="btn btn-danger"
