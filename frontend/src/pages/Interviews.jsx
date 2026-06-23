@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import axios from "axios";
+import api from "../services/api";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -37,9 +37,9 @@ function Interviews() {
 
         try {
 
-            const response = await axios.get(
+            const response = await api.get(
 
-                "http://localhost:5000/api/interviews/all"
+                "/api/interviews/all"
 
             );
 
@@ -70,9 +70,9 @@ function Interviews() {
 
         try {
 
-            await axios.put(
+            await api.put(
 
-                `http://localhost:5000/api/interviews/status/${id}`,
+                `/api/interviews/status/${id}`,
 
                 {
 

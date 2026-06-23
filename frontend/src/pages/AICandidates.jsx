@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 import { FaCalendarAlt } from "react-icons/fa";
 
 import Navbar from "../components/Navbar";
@@ -22,7 +22,7 @@ function AICandidates() {
 
     const fetchCandidates = async () => {
         try {
-            const response = await axios.get("http://localhost:5000/api/applications/all");
+            const response = await api.get("/api/applications/all");
             const shortlistedCandidates = response.data.filter(
                 (candidate) => candidate.status === "Shortlisted"
             );
@@ -36,7 +36,7 @@ function AICandidates() {
 
     const shortlistCandidate = async (id) => {
         try {
-            await axios.put(`http://localhost:5000/api/applications/shortlist/${id}`);
+            await api.put(`/api/applications/shortlist/${id}`);
             alert("Candidate Shortlisted Successfully");
             fetchCandidates();
         } catch (error) {
@@ -46,7 +46,7 @@ function AICandidates() {
 
     const rejectCandidate = async (id) => {
         try {
-            await axios.put(`http://localhost:5000/api/applications/reject/${id}`);
+            await axios.put(`/api/applications/reject/${id}`);
             alert("Candidate Rejected Successfully");
             fetchCandidates();
         } catch (error) {
@@ -66,7 +66,7 @@ function AICandidates() {
                 mode: interviewData.mode,
                 interviewer: "HR Manager",
             };
-            await axios.post("http://localhost:5000/api/interviews", payload);
+            await api.post("/api/interviews", payload);
             alert("Interview scheduled successfully");
             setShowModal(false);
             setInterviewData({ date: "", time: "", mode: "Video Call" });
@@ -147,7 +147,7 @@ function AICandidates() {
 
                                             <div className="mb-3">
                                                 <a
-                                                    href={`http://localhost:5000/uploads/resumes/${candidate.resume_file}`}
+                                                    href={`/uploads/resumes/${candidate.resume_file}`}
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="btn btn-outline-danger btn-sm w-100"

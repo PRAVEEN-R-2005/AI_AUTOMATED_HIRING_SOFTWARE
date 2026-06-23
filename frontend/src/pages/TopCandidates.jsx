@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -24,7 +24,7 @@ function TopCandidates() {
 
     const fetchTopCandidates = async () => {
         try {
-            const response = await axios.get("http://localhost:5000/api/top-candidates");
+            const response = await api.get("/api/top-candidates");
             setTopCandidates(response.data);
         } catch (error) {
             console.log(error);

@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -32,9 +32,9 @@ function ManageJD() {
 
         try {
 
-            const response = await axios.get(
+            const response = await api.get(
 
-                "http://localhost:5000/api/job-descriptions"
+                "/api/job-descriptions"
 
             );
 
@@ -61,9 +61,9 @@ function ManageJD() {
 
         try {
 
-            await axios.post(
+            await api.post(
 
-                "http://localhost:5000/api/job-descriptions",
+                "/api/job-descriptions",
 
                 {
 
@@ -112,9 +112,9 @@ function ManageJD() {
 
         try {
 
-            await axios.delete(
+            await api.delete(
 
-                `http://localhost:5000/api/job-descriptions/${id}`
+                `/api/job-descriptions/${id}`
 
             );
 
@@ -142,9 +142,9 @@ const publishJD = async (id) => {
 
     try {
 
-        await axios.put(
+        await api.put(
 
-            `http://localhost:5000/api/job-descriptions/publish/${id}`
+            `/api/job-descriptions/publish/${id}`
 
         );
 
@@ -173,9 +173,9 @@ const closeJD = async (id) => {
 
     try {
 
-        await axios.put(
+        await api.put(
 
-            `http://localhost:5000/api/job-descriptions/close/${id}`
+            `/api/job-descriptions/close/${id}`
 
         );
 

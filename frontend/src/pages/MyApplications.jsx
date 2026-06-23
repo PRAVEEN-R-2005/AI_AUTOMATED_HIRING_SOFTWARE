@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -20,9 +20,9 @@ function MyApplications() {
 
         try {
 
-            const response = await axios.get(
+            const response = await api.get(
 
-                "http://localhost:5000/api/applications/all"
+                "/api/applications/all"
 
             );
 
@@ -171,20 +171,13 @@ function MyApplications() {
                                                 <td>
 
                                                     <a
-
-                                                        href={`http://localhost:5000/uploads/resumes/${app.resume_file}`}
-
-                                                        target="_blank"
-
-                                                        rel="noreferrer"
-
-                                                        className="btn btn-danger"
-
-                                                    >
-
-                                                        View Resume
-
-                                                    </a>
+    href={`http://localhost:5000/uploads/resumes/${app.resume_file}`}
+    target="_blank"
+    rel="noreferrer"
+    className="btn btn-danger"
+>
+    View Resume
+</a>
 
                                                 </td>
 

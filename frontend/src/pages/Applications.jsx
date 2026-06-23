@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../services/api";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -18,7 +18,7 @@ function Applications() {
 
     const fetchApplications = async () => {
         try {
-            const response = await axios.get("http://localhost:5000/api/applications/all");
+            const response = await api.get("/api/applications/all");
             setApplications(response.data);
         } catch (error) {
             console.error(error);
@@ -27,7 +27,7 @@ function Applications() {
 
     const shortlistCandidate = async (id) => {
         try {
-            await axios.put(`http://localhost:5000/api/applications/shortlist/${id}`);
+            await api.put(`/api/applications/shortlist/${id}`);
             alert("Candidate Shortlisted Successfully");
             fetchApplications();
         } catch (error) {
@@ -37,7 +37,7 @@ function Applications() {
 
     const rejectCandidate = async (id) => {
         try {
-            await axios.put(`http://localhost:5000/api/applications/reject/${id}`);
+            await api.put(`/api/applications/reject/${id}`);
             alert("Candidate Rejected Successfully");
             fetchApplications();
         } catch (error) {
@@ -47,7 +47,7 @@ function Applications() {
 
     const runAI = async (id) => {
         try {
-            await axios.put(`http://localhost:5000/api/ai/run/${id}`);
+            await api.put(`/api/ai/run/${id}`);
             alert("AI Match Score Generated Successfully");
             fetchApplications();
         } catch (error) {
@@ -187,11 +187,14 @@ function Applications() {
                                             <div className="mb-3">
                                                 <span className={`badge bg-${getBadge(app.status)}`}>{app.status}</span>
                                             </div>
-                                            <div className="mb-3">
-                                                <a href={`http://localhost:5000/uploads/resumes/${app.resume_file}`} target="_blank" rel="noreferrer" className="btn btn-outline-danger btn-sm me-2">
-                                                    View Resume
-                                                </a>
-                                            </div>
+                                            <a
+    href={`http://localhost:5000/uploads/resumes/${app.resume_file}`}
+    target="_blank"
+    rel="noreferrer"
+    className="btn btn-danger"
+>
+    View Resume
+</a>
                                             <div className="mt-auto d-flex flex-wrap gap-2">
                                                 <button className="btn btn-success btn-sm" onClick={() => runAI(app.id)}>
                                                     Run AI

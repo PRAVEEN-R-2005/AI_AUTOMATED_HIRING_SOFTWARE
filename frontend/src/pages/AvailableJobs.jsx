@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 import Navbar from "../components/Navbar";
@@ -23,9 +23,9 @@ function AvailableJobs() {
         try {
 
 
-            const response = await axios.get(
+            const response = await api.get(
 
-                "http://localhost:5000/api/job-descriptions/open"
+                "/api/job-descriptions/open"
 
             );
 

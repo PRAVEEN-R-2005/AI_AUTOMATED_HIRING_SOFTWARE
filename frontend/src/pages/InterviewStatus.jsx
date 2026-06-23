@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -19,9 +19,9 @@ function InterviewStatus() {
 
         try {
 
-            const response = await axios.get(
+            const response = await api.get(
 
-                "http://localhost:5000/api/interviews/all"
+                "/api/interviews/all"
 
             );
 

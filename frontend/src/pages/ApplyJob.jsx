@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import axios from "axios";
+import api from "../services/api";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -80,16 +80,16 @@ function ApplyJob() {
             formData.append("job_id", jobId);
             formData.append("resume_file", file);
 
-            const response = await axios.post(
-                "http://localhost:5000/api/applications",
+            const response = await api.post(
+                "/api/applications",
                 formData
             );
 
             const applicationId = response.data?.applicationId;
             if (applicationId) {
                 try {
-                    await axios.put(
-                        `http://localhost:5000/api/ai/run/${applicationId}`
+                    await api.put(
+                        `/api/ai/run/${applicationId}`
                     );
                 } catch (aiError) {
                     console.log("AI scoring failed", aiError);
