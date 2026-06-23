@@ -114,6 +114,77 @@ function Login() {
 
     };
 
+    const demoLogin = async (emailValue, passwordValue) => {
+
+    try {
+
+        const response = await axios.post(
+
+            "http://localhost:5000/api/auth/login",
+
+            {
+
+                email: emailValue,
+
+                password: passwordValue
+
+            }
+
+        );
+
+        localStorage.setItem(
+
+            "token",
+
+            response.data.token
+
+        );
+
+        localStorage.setItem(
+
+            "role",
+
+            response.data.role
+
+        );
+
+        if (
+
+            response.data.role === "Candidate"
+
+        ) {
+
+            navigate(
+
+                "/student-dashboard"
+
+            );
+
+        }
+
+        else {
+
+            navigate(
+
+                "/dashboard"
+
+            );
+
+        }
+
+    }
+
+    catch (error) {
+
+        alert(
+
+            "Demo Login Failed"
+
+        );
+
+    }
+
+};
 
     return (
 
@@ -300,6 +371,85 @@ function Login() {
                                 Login
 
                             </button>
+
+                            <hr className="my-4" />
+
+                            <h5 className="text-center text-white mb-3">
+                                Demo Login
+                            </h5>
+                            <button
+
+    type="button"
+
+    className="btn btn-info w-100 mt-2"
+
+    onClick={() =>
+
+        demoLogin(
+
+            "admin@gmail.com",
+
+            "admin123"
+
+        )
+
+    }
+
+>
+
+    Admin Demo
+
+</button>
+
+                            <button
+
+    type="button"
+
+    className="btn btn-success w-100 mt-2"
+
+    onClick={() =>
+
+        demoLogin(
+
+            "hr@gmail.com",
+
+            "123456"
+
+        )
+
+    }
+
+>
+
+    HR Demo
+
+</button>
+
+<button
+
+    type="button"
+
+    className="btn btn-danger w-100 mt-2"
+
+    onClick={() =>
+
+        demoLogin(
+
+            "candidate@gmail.com",
+
+            "123456"
+
+        )
+
+    }
+
+>
+
+    Candidate Demo
+
+</button>
+
+                            <hr className="my-4" />
 
 
                             <button
