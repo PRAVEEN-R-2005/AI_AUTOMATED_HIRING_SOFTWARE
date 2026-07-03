@@ -44,7 +44,39 @@ function Jobs() {
 
         catch (error) {
 
-            console.log(error);
+            console.warn("Failed to fetch jobs, using demo data:", error);
+            setJobs([
+                {
+                    jd_id: 1,
+                    title: "AI Engineer (Python)",
+                    skills: "Python, PyTorch, LLMs, NLP",
+                    experience: "3+ years",
+                    salary: "$120,000 - $150,000",
+                    location: "Remote",
+                    description: "We are looking for an AI Engineer to join our team...",
+                    status: "Open"
+                },
+                {
+                    jd_id: 2,
+                    title: "Frontend Developer",
+                    skills: "React, JavaScript, TailwindCSS, HTML",
+                    experience: "2+ years",
+                    salary: "$80,000 - $100,000",
+                    location: "San Francisco, CA",
+                    description: "We are seeking a Frontend Developer proficient in React...",
+                    status: "Open"
+                },
+                {
+                    jd_id: 3,
+                    title: "HR Specialist",
+                    skills: "Recruiting, Onboarding, Communication",
+                    experience: "1+ years",
+                    salary: "$60,000 - $75,000",
+                    location: "Remote",
+                    description: "Seeking an HR Specialist to manage hiring pipelines...",
+                    status: "Open"
+                }
+            ]);
 
         }
 

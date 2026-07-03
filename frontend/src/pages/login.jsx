@@ -104,6 +104,31 @@ function Login() {
 
         catch (error) {
 
+            // Fallback for Vercel Demo / Offline Mode!
+            // If the backend API fails (e.g. because we are running on Vercel and backend is on localhost, or DB is down),
+            // we can authenticate locally for the demo credentials.
+            const normalizedEmail = email?.trim().toLowerCase();
+            const normalizedPassword = password?.trim();
+            if (
+                (normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||
+                (normalizedEmail === "hr@gmail.com" && normalizedPassword === "123456") ||
+                (normalizedEmail === "candidate@gmail.com" && normalizedPassword === "123456")
+            ) {
+                let role = "Candidate";
+                if (normalizedEmail === "admin@gmail.com") role = "Admin";
+                else if (normalizedEmail === "hr@gmail.com") role = "HR";
+
+                localStorage.setItem("token", "mock-demo-token");
+                localStorage.setItem("role", role);
+
+                if (role === "Candidate") {
+                    navigate("/student-dashboard");
+                } else {
+                    navigate("/dashboard");
+                }
+                return;
+            }
+
             alert(
 
                 "Invalid Credentials"
@@ -175,6 +200,31 @@ function Login() {
     }
 
     catch (error) {
+
+        // Fallback for Vercel Demo / Offline Mode!
+        // If the backend API fails (e.g. because we are running on Vercel and backend is on localhost, or DB is down),
+        // we can authenticate locally for the demo credentials.
+        const normalizedEmail = emailValue?.trim().toLowerCase();
+        const normalizedPassword = passwordValue?.trim();
+        if (
+            (normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||
+            (normalizedEmail === "hr@gmail.com" && normalizedPassword === "123456") ||
+            (normalizedEmail === "candidate@gmail.com" && normalizedPassword === "123456")
+        ) {
+            let role = "Candidate";
+            if (normalizedEmail === "admin@gmail.com") role = "Admin";
+            else if (normalizedEmail === "hr@gmail.com") role = "HR";
+
+            localStorage.setItem("token", "mock-demo-token");
+            localStorage.setItem("role", role);
+
+            if (role === "Candidate") {
+                navigate("/student-dashboard");
+            } else {
+                navigate("/dashboard");
+            }
+            return;
+        }
 
         alert(
 

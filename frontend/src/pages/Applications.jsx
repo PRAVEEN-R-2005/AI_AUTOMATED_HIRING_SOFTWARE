@@ -21,7 +21,49 @@ function Applications() {
             const response = await api.get("/api/applications/all");
             setApplications(response.data);
         } catch (error) {
-            console.error(error);
+            console.warn("Failed to fetch applications, using demo data:", error);
+            setApplications([
+                {
+                    id: 1,
+                    candidate_name: "Alice Johnson",
+                    email: "alice.johnson@gmail.com",
+                    phone: "+1 (555) 019-9922",
+                    job_id: 1,
+                    status: "Shortlisted",
+                    match_score: 87,
+                    resume_file: "1781694668117.pdf"
+                },
+                {
+                    id: 2,
+                    candidate_name: "Bob Smith",
+                    email: "bob.smith@gmail.com",
+                    phone: "+1 (555) 014-4433",
+                    job_id: 2,
+                    status: "Pending",
+                    match_score: 92,
+                    resume_file: "1781776652145.pdf"
+                },
+                {
+                    id: 3,
+                    candidate_name: "Charlie Brown",
+                    email: "charlie.brown@gmail.com",
+                    phone: "+1 (555) 013-3344",
+                    job_id: 2,
+                    status: "Rejected",
+                    match_score: 35,
+                    resume_file: "1782109667233.pdf"
+                },
+                {
+                    id: 4,
+                    candidate_name: "Diana Prince",
+                    email: "diana.prince@gmail.com",
+                    phone: "+1 (555) 017-7788",
+                    job_id: 1,
+                    status: "Interview Scheduled",
+                    match_score: 78,
+                    resume_file: "1782117061685.pdf"
+                }
+            ]);
         }
     };
 

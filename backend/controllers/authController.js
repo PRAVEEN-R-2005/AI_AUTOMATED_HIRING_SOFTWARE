@@ -49,6 +49,32 @@ const loginUser = (req, res) => {
 
     const { email, password } = req.body;
 
+    const normalizedEmail = email?.trim().toLowerCase();
+    const normalizedPassword = password?.trim();
+
+    // Backend-side bypass for demo credentials (works even if database is empty/unseeded)
+    if (
+        (normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||
+        (normalizedEmail === "hr@gmail.com" && normalizedPassword === "123456") ||
+        (normalizedEmail === "candidate@gmail.com" && normalizedPassword === "123456")
+    ) {
+        let role = "Candidate";
+        if (normalizedEmail === "admin@gmail.com") role = "Admin";
+        else if (normalizedEmail === "hr@gmail.com") role = "HR";
+
+        const token = jwt.sign(
+            { id: 999, role },
+            process.env.JWT_SECRET || "praveen_secret_key",
+            { expiresIn: "1d" }
+        );
+
+        return res.status(200).json({
+            message: "Login Successful",
+            token,
+            role
+        });
+    }
+
     User.findUserByEmail(email, async (err, results) => {
 
         if (err) {
