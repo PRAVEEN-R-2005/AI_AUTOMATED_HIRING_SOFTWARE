@@ -1,9 +1,9 @@
-
 const express = require("express");
 
 const router = express.Router();
 
 const upload = require("../middleware/multer");
+const { verifyToken, requireRole } = require("../middleware/authMiddleware");
 
 const {
 
@@ -26,6 +26,9 @@ router.post(
 
     "/",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
+
     upload.single("jd_file"),
 
     createJob
@@ -42,6 +45,9 @@ router.get(
 
     "/all",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
+
     getJobs
 
 );
@@ -56,6 +62,9 @@ router.get(
 router.get(
 
     "/open",
+
+    verifyToken,
+    requireRole(["Candidate", "HR", "Admin"]),
 
     getOpenJobs
 
@@ -72,6 +81,9 @@ router.put(
 
     "/publish/:id",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
+
     publishJob
 
 );
@@ -87,6 +99,9 @@ router.put(
 
     "/close/:id",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
+
     closeJob
 
 );
@@ -101,6 +116,9 @@ router.delete(
 
     "/:id",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
+
     deleteJob
 
 );
@@ -111,3 +129,4 @@ router.delete(
 // ======================================
 
 module.exports = router;
+

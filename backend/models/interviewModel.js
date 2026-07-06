@@ -161,6 +161,17 @@ const updateInterviewStatus = (
 };
 
 
+const getInterviewsByEmail = (
+    email,
+    callback
+) => {
+    db.query(
+        "SELECT * FROM interviews WHERE email=? ORDER BY interview_date ASC",
+        [email],
+        callback
+    );
+};
+
 module.exports = {
 
     createInterview,
@@ -169,6 +180,8 @@ module.exports = {
 
     getInterviewById,
 
-    updateInterviewStatus
+    updateInterviewStatus,
+
+    getInterviewsByEmail
 
 };

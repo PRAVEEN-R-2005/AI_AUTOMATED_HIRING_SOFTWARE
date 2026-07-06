@@ -20,26 +20,15 @@ function Login() {
 
     const navigate = useNavigate();
 
-    const [
-
-        email,
-
-        setEmail
-
-    ] = useState("");
-
-    const [
-
-        password,
-
-        setPassword
-
-    ] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
 
 
     const handleLogin = async (e) => {
 
         e.preventDefault();
+        setLoading(true);
 
         try {
 
@@ -75,6 +64,14 @@ function Login() {
 
             );
 
+            localStorage.setItem(
+
+                "email",
+
+                response.data.email
+
+            );
+
 
             if (
 
@@ -102,7 +99,7 @@ function Login() {
 
         }
 
-        catch (error) {
+        catch {
 
             // Fallback for Vercel Demo / Offline Mode!
             // If the backend API fails (e.g. because we are running on Vercel and backend is on localhost, or DB is down),
@@ -120,6 +117,7 @@ function Login() {
 
                 localStorage.setItem("token", "mock-demo-token");
                 localStorage.setItem("role", role);
+                localStorage.setItem("email", normalizedEmail);
 
                 if (role === "Candidate") {
                     navigate("/student-dashboard");
@@ -135,6 +133,8 @@ function Login() {
 
             );
 
+        } finally {
+            setLoading(false);
         }
 
     };
@@ -173,6 +173,14 @@ function Login() {
 
         );
 
+        localStorage.setItem(
+
+            "email",
+
+            response.data.email
+
+        );
+
         if (
 
             response.data.role === "Candidate"
@@ -199,7 +207,7 @@ function Login() {
 
     }
 
-    catch (error) {
+    catch {
 
         // Fallback for Vercel Demo / Offline Mode!
         // If the backend API fails (e.g. because we are running on Vercel and backend is on localhost, or DB is down),
@@ -217,6 +225,7 @@ function Login() {
 
             localStorage.setItem("token", "mock-demo-token");
             localStorage.setItem("role", role);
+            localStorage.setItem("email", normalizedEmail);
 
             if (role === "Candidate") {
                 navigate("/student-dashboard");
@@ -415,10 +424,11 @@ function Login() {
                             <button
 
                                 className="btn btn-primary w-100"
+                                disabled={loading}
 
                             >
 
-                                Login
+                                {loading ? "Signing in..." : "Login"}
 
                             </button>
 

@@ -26,13 +26,6 @@ function Interviews() {
     );
 
 
-    useEffect(() => {
-
-        fetchInterviews();
-
-    }, []);
-
-
     const fetchInterviews = async () => {
 
         try {
@@ -43,18 +36,17 @@ function Interviews() {
 
             );
 
-            setInterviews(
-
-                response.data
-
-            );
+            const data = response.data;
+            setTimeout(() => {
+                setInterviews(data);
+            }, 0);
 
         }
 
         catch (error) {
 
             console.warn("Failed to fetch interviews, using demo data:", error);
-            setInterviews([
+            const demoData = [
                 {
                     id: 1,
                     candidate_name: "Alice Johnson",
@@ -79,11 +71,20 @@ function Interviews() {
                     mode: "Online",
                     interviewer: "Lead Recruiter"
                 }
-            ]);
+            ];
+            setTimeout(() => {
+                setInterviews(demoData);
+            }, 0);
 
         }
 
     };
+
+    useEffect(() => {
+
+        fetchInterviews();
+
+    }, []);
 
 
     const updateStatus = async (

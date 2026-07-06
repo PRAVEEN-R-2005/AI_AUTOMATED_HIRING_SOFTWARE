@@ -8,9 +8,8 @@ const getTopCandidates = (callback)=>{
     const sql =
 
     `
-    SELECT *
-
-    FROM ai_candidates
+    SELECT id, candidate_name AS name, email, phone, status, match_score, resume_file, created_at
+    FROM applications
 
     ORDER BY match_score DESC
     `;
@@ -39,9 +38,8 @@ const getCandidateById = (
     const sql =
 
     `
-    SELECT *
-
-    FROM ai_candidates
+    SELECT id, candidate_name AS name, email, phone, status, match_score, resume_file, created_at
+    FROM applications
 
     WHERE id = ?
     `;
@@ -70,9 +68,8 @@ const getAllCandidates = (
     const sql =
 
     `
-    SELECT *
-
-    FROM ai_candidates
+    SELECT id, candidate_name AS name, email, phone, status, match_score, resume_file, created_at
+    FROM applications
     `;
 
     db.query(

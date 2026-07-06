@@ -16,10 +16,6 @@ function AICandidates() {
         mode: "Video Call",
     });
 
-    useEffect(() => {
-        fetchCandidates();
-    }, []);
-
     const fetchCandidates = async () => {
         try {
             const response = await api.get("/api/applications/all");
@@ -28,10 +24,12 @@ function AICandidates() {
             );
             // Sort by match_score descending
             shortlistedCandidates.sort((a, b) => (b.match_score || b.ai_score || 0) - (a.match_score || a.ai_score || 0));
-            setCandidates(shortlistedCandidates);
+            setTimeout(() => {
+                setCandidates(shortlistedCandidates);
+            }, 0);
         } catch (error) {
             console.error("Failed to fetch AI candidates, using demo data:", error);
-            setCandidates([
+            const demoData = [
                 {
                     id: 1,
                     candidate_name: "Alice Johnson",
@@ -50,23 +48,20 @@ function AICandidates() {
                     match_score: 78,
                     resume_file: "1782117061685.pdf"
                 }
-            ]);
+            ];
+            setTimeout(() => {
+                setCandidates(demoData);
+            }, 0);
         }
     };
 
-    const shortlistCandidate = async (id) => {
-        try {
-            await api.put(`/api/applications/shortlist/${id}`);
-            alert("Candidate Shortlisted Successfully");
-            fetchCandidates();
-        } catch (error) {
-            console.error(error);
-        }
-    };
+    useEffect(() => {
+        fetchCandidates();
+    }, []);
 
     const rejectCandidate = async (id) => {
         try {
-            await axios.put(`/api/applications/reject/${id}`);
+            await api.put(`/api/applications/reject/${id}`);
             alert("Candidate Rejected Successfully");
             fetchCandidates();
         } catch (error) {

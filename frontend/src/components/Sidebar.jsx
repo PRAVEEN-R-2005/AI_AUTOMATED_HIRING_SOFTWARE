@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { FaTachometerAlt, FaClipboardList, FaBriefcase, FaFileAlt, FaRobot, FaCalendarAlt, FaTrophy, FaUserGraduate } from "react-icons/fa";
+import { FaTachometerAlt, FaClipboardList, FaBriefcase, FaFileAlt, FaRobot, FaCalendarAlt, FaTrophy, FaUserGraduate, FaUsers } from "react-icons/fa";
 
 function Sidebar() {
 
@@ -72,6 +72,62 @@ function Sidebar() {
 
                     </Link>
 
+                    <Link
+
+                        to="/candidates"
+
+                        className="text-white text-decoration-none d-block mb-4"
+
+                    >
+
+                        <FaUsers className="me-2" />
+
+                        Candidates
+
+                    </Link>
+
+                    <Link
+
+                        to="/ai-candidates"
+
+                        className="text-white text-decoration-none d-block mb-4"
+
+                    >
+
+                        <FaRobot className="me-2" />
+
+                        AI Candidates
+
+                    </Link>
+
+                    <Link
+
+                        to="/interviews"
+
+                        className="text-white text-decoration-none d-block mb-4"
+
+                    >
+
+                        <FaCalendarAlt className="me-2" />
+
+                        Interviews
+
+                    </Link>
+
+                    <Link
+
+                        to="/top-candidates"
+
+                        className="text-white text-decoration-none d-block mb-4"
+
+                    >
+
+                        <FaTrophy className="me-2" />
+
+                        Top Candidates
+
+                    </Link>
+
                 </>
 
             }
@@ -111,6 +167,20 @@ function Sidebar() {
                         <FaFileAlt className="me-2" />
 
                         Applications
+
+                    </Link>
+
+                    <Link
+
+                        to="/candidates"
+
+                        className="text-white text-decoration-none d-block mb-4"
+
+                    >
+
+                        <FaUsers className="me-2" />
+
+                        Candidates
 
                     </Link>
 

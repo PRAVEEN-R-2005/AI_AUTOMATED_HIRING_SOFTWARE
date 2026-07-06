@@ -188,12 +188,34 @@ const updateInterviewStatus = (
 };
 
 
+const getInterviewsByEmail = (req, res) => {
+    const email = req.params.email;
+
+    if (req.user.role === "Candidate" && req.user.email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({
+            success: false,
+            message: "Access Denied: You are not authorized to view interviews for this email"
+        });
+    }
+
+    Interview.getInterviewsByEmail(email, (err, results) => {
+        if (err) {
+            return res.status(500).json({
+                message: "Database Error"
+            });
+        }
+        res.status(200).json(results);
+    });
+};
+
 module.exports = {
 
     createInterview,
 
     getAllInterviews,
 
-    updateInterviewStatus
+    updateInterviewStatus,
+
+    getInterviewsByEmail
 
 };

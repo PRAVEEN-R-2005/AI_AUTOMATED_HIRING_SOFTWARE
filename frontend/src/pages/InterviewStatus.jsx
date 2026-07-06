@@ -8,28 +8,21 @@ function InterviewStatus() {
 
     const [interviews, setInterviews] = useState([]);
 
-    useEffect(() => {
-
-        fetchInterviews();
-
-    }, []);
-
-
     const fetchInterviews = async () => {
 
         try {
 
+            const email = localStorage.getItem("email");
             const response = await api.get(
 
-                "/api/interviews/all"
+                `/api/interviews/email/${email}`
 
             );
 
-            setInterviews(
-
-                response.data
-
-            );
+            const data = response.data;
+            setTimeout(() => {
+                setInterviews(data);
+            }, 0);
 
         }
 
@@ -40,6 +33,12 @@ function InterviewStatus() {
         }
 
     };
+
+    useEffect(() => {
+
+        fetchInterviews();
+
+    }, []);
 
 
     const getBadge = (status) => {

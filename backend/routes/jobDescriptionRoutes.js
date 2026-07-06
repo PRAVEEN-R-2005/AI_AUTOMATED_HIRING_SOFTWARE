@@ -1,9 +1,7 @@
-
 const express = require("express");
 
 const router = express.Router();
-
-
+const { verifyToken, requireRole } = require("../middleware/authMiddleware");
 
 const {
 
@@ -40,6 +38,9 @@ router.post(
 
     "/",
 
+    verifyToken,
+    requireRole(["Admin"]),
+
     createJD
 
 );
@@ -52,6 +53,9 @@ router.post(
 router.get(
 
     "/",
+
+    verifyToken,
+    requireRole(["Admin", "HR"]),
 
     getAllJD
 
@@ -66,6 +70,9 @@ router.put(
 
     "/:id",
 
+    verifyToken,
+    requireRole(["Admin"]),
+
     updateJD
 
 );
@@ -79,12 +86,18 @@ router.delete(
 
     "/:id",
 
+    verifyToken,
+    requireRole(["Admin"]),
+
     deleteJD
 
 );
 router.put(
 
     "/publish/:id",
+
+    verifyToken,
+    requireRole(["Admin"]),
 
     publishJD
 
@@ -95,12 +108,18 @@ router.put(
 
     "/close/:id",
 
+    verifyToken,
+    requireRole(["Admin"]),
+
     closeJD
 
 );
 router.get(
 
     "/open",
+
+    verifyToken,
+    requireRole(["Candidate", "HR", "Admin"]),
 
     getOpenJD
 

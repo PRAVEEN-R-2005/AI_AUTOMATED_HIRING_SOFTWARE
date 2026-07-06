@@ -20,10 +20,6 @@ function Jobs() {
     const [jobs, setJobs] = useState([]);
     const [search, setSearch] = useState("");
 
-    useEffect(() => {
-        fetchJobs();
-    }, []);
-
     const fetchJobs = async () => {
 
         try {
@@ -34,18 +30,17 @@ function Jobs() {
 
             );
 
-            setJobs(
-
-                response.data
-
-            );
+            const data = response.data;
+            setTimeout(() => {
+                setJobs(data);
+            }, 0);
 
         }
 
         catch (error) {
 
             console.warn("Failed to fetch jobs, using demo data:", error);
-            setJobs([
+            const demoData = [
                 {
                     jd_id: 1,
                     title: "AI Engineer (Python)",
@@ -63,7 +58,7 @@ function Jobs() {
                     experience: "2+ years",
                     salary: "$80,000 - $100,000",
                     location: "San Francisco, CA",
-                    description: "We are seeking a Frontend Developer proficient in React...",
+                    description: "Looking for a Frontend Developer with React experience...",
                     status: "Open"
                 },
                 {
@@ -76,11 +71,18 @@ function Jobs() {
                     description: "Seeking an HR Specialist to manage hiring pipelines...",
                     status: "Open"
                 }
-            ]);
+            ];
+            setTimeout(() => {
+                setJobs(demoData);
+            }, 0);
 
         }
 
     };
+
+    useEffect(() => {
+        fetchJobs();
+    }, []);
 
     const filteredJobs = jobs.filter(
 

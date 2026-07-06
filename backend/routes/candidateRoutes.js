@@ -1,7 +1,7 @@
-
 const express = require("express");
 
 const router = express.Router();
+const { verifyToken, requireRole } = require("../middleware/authMiddleware");
 
 const {
 
@@ -30,6 +30,8 @@ router.post(
 
     "/",
 
+    verifyToken,
+    requireRole(["Candidate", "HR", "Admin"]),
     addCandidate
 
 );
@@ -43,6 +45,8 @@ router.get(
 
     "/all",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
     getAllCandidates
 
 );
@@ -56,6 +60,8 @@ router.get(
 
     "/:id",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
     getCandidateById
 
 );
@@ -69,6 +75,8 @@ router.put(
 
     "/:id",
 
+    verifyToken,
+    requireRole(["Candidate", "HR", "Admin"]),
     updateCandidate
 
 );
@@ -82,6 +90,8 @@ router.delete(
 
     "/:id",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
     deleteCandidate
 
 );

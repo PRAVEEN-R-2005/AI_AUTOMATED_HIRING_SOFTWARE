@@ -1,7 +1,7 @@
-
 const express = require("express");
 
 const router = express.Router();
+const { verifyToken, requireRole } = require("../middleware/authMiddleware");
 
 const {
 
@@ -23,6 +23,8 @@ router.post(
 
     "/run",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
     runAI
 
 );

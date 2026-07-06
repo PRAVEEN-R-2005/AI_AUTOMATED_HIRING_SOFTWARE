@@ -9,31 +9,28 @@ function MyApplications() {
 
     const [applications, setApplications] = useState([]);
 
-    useEffect(() => {
-
-        fetchApplications();
-
-    }, []);
-
-
     const fetchApplications = async () => {
 
         try {
 
+            const email = localStorage.getItem("email");
             const response = await api.get(
 
-                "/api/applications/all"
+                `/api/applications/email/${email}`
 
             );
 
-            setApplications(response.data);
+            const data = response.data;
+            setTimeout(() => {
+                setApplications(data);
+            }, 0);
 
         }
 
         catch (error) {
 
             console.warn("Failed to fetch applications, using demo data:", error);
-            setApplications([
+            const demoData = [
                 {
                     id: 1,
                     candidate_name: "Candidate User",
@@ -48,11 +45,20 @@ function MyApplications() {
                     resume_file: "1781776652145.pdf",
                     status: "Pending"
                 }
-            ]);
+            ];
+            setTimeout(() => {
+                setApplications(demoData);
+            }, 0);
 
         }
 
     };
+
+    useEffect(() => {
+
+        fetchApplications();
+
+    }, []);
 
 
     const getBadge = (status) => {

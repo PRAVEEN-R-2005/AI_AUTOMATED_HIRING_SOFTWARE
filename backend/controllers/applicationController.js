@@ -102,9 +102,15 @@ const getApplications = (req, res) => {
 // ====================================
 
 const getApplicationByEmail = (req, res) => {
-
     const email = req.params.email;
 
+    // IDOR Protection: Candidates can only fetch applications matching their own email.
+    if (req.user.role === "Candidate" && req.user.email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({
+            success: false,
+            message: "Access Denied: You are not authorized to view applications for this email"
+        });
+    }
 
     Application.getApplicationByEmail(
 

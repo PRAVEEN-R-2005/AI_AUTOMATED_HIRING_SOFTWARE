@@ -62,13 +62,6 @@ function Dashboard() {
     });
 
 
-    useEffect(() => {
-
-        fetchStats();
-
-    }, []);
-
-
     const fetchStats = async () => {
 
         try {
@@ -79,27 +72,35 @@ function Dashboard() {
 
             );
 
-            setStats(
-
-                response.data
-
-            );
+            const data = response.data;
+            setTimeout(() => {
+                setStats(data);
+            }, 0);
 
         }
 
         catch (error) {
 
             console.warn("Failed to fetch dashboard stats, using demo data:", error);
-            setStats({
+            const demoData = {
                 jobs: 12,
                 candidates: 45,
                 interviews: 8,
                 topCandidates: 5
-            });
+            };
+            setTimeout(() => {
+                setStats(demoData);
+            }, 0);
 
         }
 
     };
+
+    useEffect(() => {
+
+        fetchStats();
+
+    }, []);
 
 
     const chartData = {

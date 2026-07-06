@@ -8,20 +8,11 @@ import Sidebar from "../components/Sidebar";
 function AvailableJobs() {
 
     const [jobs, setJobs] = useState([]);
-
     const navigate = useNavigate();
-
-    useEffect(() => {
-
-        fetchJobs();
-
-    }, []);
-
 
     const fetchJobs = async () => {
 
         try {
-
 
             const response = await api.get(
 
@@ -29,14 +20,17 @@ function AvailableJobs() {
 
             );
 
-            setJobs(response.data);
+            const data = response.data;
+            setTimeout(() => {
+                setJobs(data);
+            }, 0);
 
         }
 
         catch (error) {
 
             console.warn("Failed to fetch available jobs, using demo data:", error);
-            setJobs([
+            const demoData = [
                 {
                     jd_id: 1,
                     title: "AI Engineer (Python)",
@@ -64,11 +58,22 @@ function AvailableJobs() {
                     location: "Remote",
                     employment_type: "Part-time"
                 }
-            ]);
+            ];
+            setTimeout(() => {
+                setJobs(demoData);
+            }, 0);
 
         }
 
     };
+
+    useEffect(() => {
+
+        fetchJobs();
+
+    }, []);
+
+
 
 
     return (

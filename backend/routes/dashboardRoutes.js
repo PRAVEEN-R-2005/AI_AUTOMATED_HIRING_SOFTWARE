@@ -1,6 +1,7 @@
 const express = require("express");
 
 const router = express.Router();
+const { verifyToken, requireRole } = require("../middleware/authMiddleware");
 
 const {
 
@@ -20,6 +21,9 @@ require(
 router.get(
 
     "/stats",
+
+    verifyToken,
+    requireRole(["HR", "Admin"]),
 
     getDashboardStats
 

@@ -8,11 +8,11 @@ const getDashboardStats = (callback) => {
 
     (SELECT COUNT(*) FROM jobs) AS jobs,
 
-    (SELECT COUNT(*) FROM ai_candidates) AS candidates,
+    (SELECT COUNT(*) FROM applications) AS candidates,
 
     (SELECT COUNT(*) FROM interviews) AS interviews,
 
-    (SELECT COUNT(*) FROM ai_candidates
+    (SELECT COUNT(*) FROM applications
      WHERE match_score >= 80) AS topCandidates
 
     `;

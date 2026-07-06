@@ -1,9 +1,9 @@
-
 const express = require("express");
 
 const router = express.Router();
 
 const upload = require("../middleware/multer");
+const { verifyToken, requireRole } = require("../middleware/authMiddleware");
 
 const {
 
@@ -37,6 +37,9 @@ router.post(
 
     "/",
 
+    verifyToken,
+    requireRole(["Candidate", "HR", "Admin"]),
+
     upload.single(
 
         "resume_file"
@@ -57,6 +60,9 @@ router.get(
 
     "/all",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
+
     getApplications
 
 );
@@ -70,6 +76,9 @@ router.get(
 router.get(
 
     "/email/:email",
+
+    verifyToken,
+    requireRole(["Candidate", "HR", "Admin"]),
 
     getApplicationByEmail
 
@@ -85,6 +94,9 @@ router.put(
 
     "/status/:id",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
+
     updateApplicationStatus
 
 );
@@ -98,6 +110,9 @@ router.put(
 router.put(
 
     "/shortlist/:id",
+
+    verifyToken,
+    requireRole(["HR", "Admin"]),
 
     shortlistApplication
 
@@ -113,6 +128,9 @@ router.put(
 
     "/reject/:id",
 
+    verifyToken,
+    requireRole(["HR", "Admin"]),
+
     rejectApplication
 
 );
@@ -126,6 +144,9 @@ router.put(
 router.put(
 
     "/score/:id",
+
+    verifyToken,
+    requireRole(["HR", "Admin"]),
 
     updateMatchScore
 

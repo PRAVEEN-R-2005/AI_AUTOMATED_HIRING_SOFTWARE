@@ -12,17 +12,16 @@ function Applications() {
     const navigate = useNavigate();
     const selectedJob = location.state?.job;
 
-    useEffect(() => {
-        fetchApplications();
-    }, []);
-
     const fetchApplications = async () => {
         try {
             const response = await api.get("/api/applications/all");
-            setApplications(response.data);
+            const data = response.data;
+            setTimeout(() => {
+                setApplications(data);
+            }, 0);
         } catch (error) {
             console.warn("Failed to fetch applications, using demo data:", error);
-            setApplications([
+            const demoData = [
                 {
                     id: 1,
                     candidate_name: "Alice Johnson",
@@ -63,9 +62,16 @@ function Applications() {
                     match_score: 78,
                     resume_file: "1782117061685.pdf"
                 }
-            ]);
+            ];
+            setTimeout(() => {
+                setApplications(demoData);
+            }, 0);
         }
     };
+
+    useEffect(() => {
+        fetchApplications();
+    }, []);
 
     const shortlistCandidate = async (id) => {
         try {
@@ -126,7 +132,6 @@ function Applications() {
 
     const totalCandidates = filteredApplications.length;
     const shortlisted = filteredApplications.filter((app) => app.status === "Shortlisted").length;
-    const rejected = filteredApplications.filter((app) => app.status === "Rejected").length;
     const excellentMatches = filteredApplications.filter((app) => (app.match_score || 0) >= 80).length;
     const averageScore = filteredApplications.length > 0
         ? Math.round(filteredApplications.reduce((sum, app) => sum + (app.match_score || 0), 0) / filteredApplications.length)

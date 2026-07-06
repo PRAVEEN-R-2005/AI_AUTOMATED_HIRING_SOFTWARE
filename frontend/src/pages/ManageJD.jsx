@@ -13,20 +13,12 @@ function ManageJD() {
     const [salary, setSalary] = useState("");
     const [location, setLocation] = useState("");
     const [description, setDescription] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const [jobDescriptions, setJobDescriptions] = useState([]);
 
     const [search, setSearch] = useState("");
 
-
-    useEffect(() => {
-
-        fetchJD();
-
-    }, []);
-
-
-    // ================= FETCH JD =================
 
     const fetchJD = async () => {
 
@@ -38,11 +30,10 @@ function ManageJD() {
 
             );
 
-            setJobDescriptions(
-
-                response.data
-
-            );
+            const data = response.data;
+            setTimeout(() => {
+                setJobDescriptions(data);
+            }, 0);
 
         }
 
@@ -54,147 +45,105 @@ function ManageJD() {
 
     };
 
+    useEffect(() => {
+
+        fetchJD();
+
+    }, []);
+
 
     // ================= CREATE JD =================
 
     const createJD = async () => {
-
+        if (!title.trim() || !skills.trim() || !description.trim()) {
+            alert("Title, Skills, and Description are required");
+            return;
+        }
+        setLoading(true);
         try {
-
             await api.post(
-
                 "/api/job-descriptions",
-
                 {
-
                     title,
                     skills,
                     experience,
                     salary,
                     location,
                     description,
-
                     created_by: "Admin"
-
                 }
-
             );
-
-            alert(
-
-                "Job Description Created Successfully"
-
-            );
-
+            alert("Job Description Created Successfully");
             setTitle("");
             setSkills("");
             setExperience("");
             setSalary("");
             setLocation("");
             setDescription("");
-
             fetchJD();
-
         }
-
         catch (error) {
-
             console.log(error);
-
+        } finally {
+            setLoading(false);
         }
-
     };
 
 
     // ================= DELETE JD =================
 
     const deleteJD = async (id) => {
-
+        if (!window.confirm("Are you sure you want to delete this job description?")) return;
+        setLoading(true);
         try {
-
             await api.delete(
-
                 `/api/job-descriptions/${id}`
-
             );
-
-            alert(
-
-                "Job Description Deleted"
-
-            );
-
+            alert("Job Description Deleted");
             fetchJD();
-
         }
-
         catch (error) {
-
             console.log(error);
-
+        } finally {
+            setLoading(false);
         }
-
     };
     
 // ================= PUBLISH JD =================
 
 const publishJD = async (id) => {
-
+    setLoading(true);
     try {
-
         await api.put(
-
             `/api/job-descriptions/publish/${id}`
-
         );
-
-        alert(
-
-            "Job Published"
-
-        );
-
+        alert("Job Published");
         fetchJD();
-
     }
-
     catch (error) {
-
         console.log(error);
-
+    } finally {
+        setLoading(false);
     }
-
 };
 
 
 // ================= CLOSE JD =================
 
 const closeJD = async (id) => {
-
+    setLoading(true);
     try {
-
         await api.put(
-
             `/api/job-descriptions/close/${id}`
-
         );
-
-        alert(
-
-            "Job Closed"
-
-        );
-
+        alert("Job Closed");
         fetchJD();
-
     }
-
     catch (error) {
-
         console.log(error);
-
+    } finally {
+        setLoading(false);
     }
-
 };
 
 
@@ -374,10 +323,11 @@ const closeJD = async (id) => {
                             className="btn btn-primary mt-4"
 
                             onClick={createJD}
+                            disabled={loading}
 
                         >
 
-                            Create JD
+                            {loading ? "Creating..." : "Create JD"}
 
                         </button>
 
@@ -569,6 +519,7 @@ Draft
 className="btn btn-success me-2"
 
 onClick={()=>publishJD(jd.jd_id)}
+disabled={loading}
 
 >
 
@@ -582,6 +533,7 @@ Publish
 className="btn btn-warning me-2"
 
 onClick={()=>closeJD(jd.jd_id)}
+disabled={loading}
 
 >
 
@@ -595,6 +547,7 @@ Close
 className="btn btn-danger"
 
 onClick={()=>deleteJD(jd.jd_id)}
+disabled={loading}
 
 >
 
