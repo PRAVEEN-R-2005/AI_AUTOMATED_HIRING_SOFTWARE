@@ -12,7 +12,7 @@ function ProtectedRoute({ children }) {
 
         :
 
-        <Navigate to="/" />;
+        <Navigate to="/login" />;
 
 }
 

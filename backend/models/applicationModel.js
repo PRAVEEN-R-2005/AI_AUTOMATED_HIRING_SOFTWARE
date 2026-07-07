@@ -68,11 +68,10 @@ const getApplications = (
 ) => {
 
     const sql =
-
     `
-    SELECT applications.*, jobs.title AS job_title
+    SELECT applications.*, job_descriptions.title AS job_title
     FROM applications
-    LEFT JOIN jobs ON applications.job_id = jobs.id
+    LEFT JOIN job_descriptions ON applications.job_id = job_descriptions.jd_id
     ORDER BY applications.id DESC
     `;
 
@@ -207,6 +206,7 @@ const shortlistApplication = (
 const rejectApplication = (
 
     id,
+    reason,
 
     callback
 
@@ -216,7 +216,7 @@ const rejectApplication = (
 
     `
     UPDATE applications
-    SET status='Rejected'
+    SET status='Rejected', rejection_reason=?
     WHERE id=?
     `;
 
@@ -226,6 +226,41 @@ const rejectApplication = (
 
         [
 
+            reason,
+            id
+
+        ],
+
+        callback
+
+    );
+
+};
+
+
+// ====================================
+// UPDATE NOTES
+// ====================================
+
+const updateNotes = (
+    id,
+    notes,
+    callback
+) => {
+    const sql =
+    `
+    UPDATE applications
+    SET recruiter_notes=?
+    WHERE id=?
+    `;
+
+    db.query(
+
+        sql,
+
+        [
+
+            notes,
             id
 
         ],
@@ -295,6 +330,8 @@ module.exports = {
     shortlistApplication,
 
     rejectApplication,
+
+    updateNotes,
 
     updateMatchScore
 

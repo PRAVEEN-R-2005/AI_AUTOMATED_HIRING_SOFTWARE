@@ -1,9 +1,10 @@
-
 require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 
@@ -12,7 +13,18 @@ const app = express();
 // Middleware
 // ====================
 
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
+
+// Rate limiting — 200 requests per 15-minute window per IP
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many requests, please try again later." }
+});
+app.use("/api/", apiLimiter);
 
 app.use(express.json());
 
@@ -130,6 +142,9 @@ const aiRoutes = require(
 const jobDescriptionRoutes = require(
 "./routes/jobDescriptionRoutes"
 );
+const notificationRoutes = require("./routes/notificationRoutes");
+const communicationRoutes = require("./routes/communicationRoutes");
+const settingsRoutes = require("./routes/settingsRoutes");
 
 
 // ====================
@@ -230,6 +245,9 @@ app.use(
     jobDescriptionRoutes
 
 );
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/communications", communicationRoutes);
+app.use("/api/settings", settingsRoutes);
 
 
 // ====================

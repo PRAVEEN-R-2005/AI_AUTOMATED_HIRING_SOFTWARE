@@ -66,24 +66,15 @@ const createJD = (
 // GET ALL JD
 // ======================================
 
-const getAllJD = (callback) => {
-
-    const sql =
-
-    `
-    SELECT *
-    FROM job_descriptions
-    ORDER BY jd_id DESC
-    `;
-
-    db.query(
-
-        sql,
-
-        callback
-
-    );
-
+const getAllJD = (email, callback) => {
+    let sql = "SELECT * FROM job_descriptions ";
+    const params = [];
+    if (email) {
+        sql += "WHERE created_by=? ";
+        params.push(email);
+    }
+    sql += "ORDER BY jd_id DESC";
+    db.query(sql, params, callback);
 };
 
 
@@ -280,6 +271,15 @@ const getOpenJD = (callback) => {
 
 };
 
+const getJDById = (id, callback) => {
+    const sql = `
+    SELECT *
+    FROM job_descriptions
+    WHERE jd_id=?
+    `;
+    db.query(sql, [id], callback);
+};
+
 module.exports = {
 
     createJD,
@@ -294,6 +294,8 @@ module.exports = {
 
     closeJD,
      
-    getOpenJD
+    getOpenJD,
+
+    getJDById
 
 };

@@ -109,6 +109,34 @@ initConnection.connect((err) => {
                     email VARCHAR(255) NOT NULL,
                     resume VARCHAR(255),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )`,
+                `CREATE TABLE IF NOT EXISTS activities (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    application_id INT DEFAULT NULL,
+                    candidate_name VARCHAR(255) DEFAULT NULL,
+                    action VARCHAR(255) DEFAULT NULL,
+                    details TEXT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )`,
+                `CREATE TABLE IF NOT EXISTS notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_email VARCHAR(255) NOT NULL,
+                    type VARCHAR(100) NOT NULL,
+                    priority VARCHAR(50) DEFAULT 'NORMAL',
+                    title VARCHAR(255) NOT NULL,
+                    message TEXT,
+                    is_read BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )`,
+                `CREATE TABLE IF NOT EXISTS communications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    candidate_id INT,
+                    candidate_name VARCHAR(255),
+                    type VARCHAR(100) NOT NULL,
+                    subject VARCHAR(255),
+                    message TEXT,
+                    delivery_status VARCHAR(50) DEFAULT 'SENT',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )`
             ];
 
@@ -118,6 +146,49 @@ initConnection.connect((err) => {
                         if (err) console.error("Error creating table:", err.message);
                         resolve();
                     });
+                });
+            }
+
+            // Self-healing migrations for recruiter notes and rejection reasons
+            await new Promise((resolve) => {
+                initConnection.query("ALTER TABLE applications ADD COLUMN recruiter_notes TEXT DEFAULT NULL", () => resolve());
+            });
+            await new Promise((resolve) => {
+                initConnection.query("ALTER TABLE applications ADD COLUMN rejection_reason TEXT DEFAULT NULL", () => resolve());
+            });
+
+            // Self-healing columns for AI screening insights
+            const aiColumns = [
+                "ALTER TABLE applications ADD COLUMN skills_score INT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN experience_score INT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN education_score INT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN matched_skills TEXT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN missing_skills TEXT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN additional_skills TEXT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN candidate_strengths TEXT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN review_considerations TEXT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN ai_summary TEXT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN recommendation VARCHAR(255) DEFAULT NULL"
+            ];
+
+            for (const colSql of aiColumns) {
+                await new Promise((resolve) => {
+                    initConnection.query(colSql, () => resolve());
+                });
+            }
+
+            // Self-healing columns for Interview feedback & scorecards
+            const interviewCols = [
+                "ALTER TABLE interviews ADD COLUMN round VARCHAR(100) DEFAULT 'Technical Interview'",
+                "ALTER TABLE interviews ADD COLUMN duration INT DEFAULT 30",
+                "ALTER TABLE interviews ADD COLUMN feedback TEXT DEFAULT NULL",
+                "ALTER TABLE interviews ADD COLUMN rating INT DEFAULT NULL",
+                "ALTER TABLE interviews ADD COLUMN meeting_link TEXT DEFAULT NULL"
+            ];
+
+            for (const colSql of interviewCols) {
+                await new Promise((resolve) => {
+                    initConnection.query(colSql, () => resolve());
                 });
             }
 

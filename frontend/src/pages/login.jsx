@@ -1,551 +1,283 @@
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import { Card, CardContent } from "../components/ui/Card";
 import {
-
-    FaRobot,
-    FaCheckCircle,
-    FaUsers,
-    FaChartLine,
-    FaBriefcase
-
-}
-
-from "react-icons/fa";
-
+  FaRobot,
+  FaCheckCircle,
+  FaUsers,
+  FaChartLine,
+  FaBriefcase
+} from "react-icons/fa";
 
 function Login() {
+  const navigate = useNavigate();
 
-    const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [loading, setLoading] = useState(false);
-
-
-    const handleLogin = async (e) => {
-
-        e.preventDefault();
-        setLoading(true);
-
-        try {
-
-            const response = await api.post(
-
-                "/api/auth/login",
-
-                {
-
-                    email,
-
-                    password
-
-                }
-
-            );
-
-
-            localStorage.setItem(
-
-                "token",
-
-                response.data.token
-
-            );
-
-
-            localStorage.setItem(
-
-                "role",
-
-                response.data.role
-
-            );
-
-            localStorage.setItem(
-
-                "email",
-
-                response.data.email
-
-            );
-
-
-            if (
-
-                response.data.role === "Candidate"
-
-            ) {
-
-                navigate(
-
-                    "/student-dashboard"
-
-                );
-
-            }
-
-            else {
-
-                navigate(
-
-                    "/dashboard"
-
-                );
-
-            }
-
-        }
-
-        catch {
-
-            // Fallback for Vercel Demo / Offline Mode!
-            // If the backend API fails (e.g. because we are running on Vercel and backend is on localhost, or DB is down),
-            // we can authenticate locally for the demo credentials.
-            const normalizedEmail = email?.trim().toLowerCase();
-            const normalizedPassword = password?.trim();
-            if (
-                (normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||
-                (normalizedEmail === "hr@gmail.com" && normalizedPassword === "123456") ||
-                (normalizedEmail === "candidate@gmail.com" && normalizedPassword === "123456")
-            ) {
-                let role = "Candidate";
-                if (normalizedEmail === "admin@gmail.com") role = "Admin";
-                else if (normalizedEmail === "hr@gmail.com") role = "HR";
-
-                localStorage.setItem("token", "mock-demo-token");
-                localStorage.setItem("role", role);
-                localStorage.setItem("email", normalizedEmail);
-
-                if (role === "Candidate") {
-                    navigate("/student-dashboard");
-                } else {
-                    navigate("/dashboard");
-                }
-                return;
-            }
-
-            alert(
-
-                "Invalid Credentials"
-
-            );
-
-        } finally {
-            setLoading(false);
-        }
-
-    };
-
-    const demoLogin = async (emailValue, passwordValue) => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
     try {
+      const response = await api.post("/api/auth/login", {
+        email,
+        password
+      });
 
-        const response = await api.post(
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("role", response.data.role);
+      localStorage.setItem("email", response.data.email);
 
-            "/api/auth/login",
+      if (response.data.role === "Candidate") {
+        navigate("/student-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch {
+      // Fallback for Vercel Demo / Offline Mode!
+      const normalizedEmail = email?.trim().toLowerCase();
+      const normalizedPassword = password?.trim();
+      if (
+        (normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||
+        (normalizedEmail === "hr@gmail.com" && normalizedPassword === "123456") ||
+        (normalizedEmail === "candidate@gmail.com" && normalizedPassword === "123456")
+      ) {
+        let role = "Candidate";
+        if (normalizedEmail === "admin@gmail.com") role = "Admin";
+        else if (normalizedEmail === "hr@gmail.com") role = "HR";
 
-            {
+        localStorage.setItem("token", "mock-demo-token");
+        localStorage.setItem("role", role);
+        localStorage.setItem("email", normalizedEmail);
 
-                email: emailValue,
-
-                password: passwordValue
-
-            }
-
-        );
-
-        localStorage.setItem(
-
-            "token",
-
-            response.data.token
-
-        );
-
-        localStorage.setItem(
-
-            "role",
-
-            response.data.role
-
-        );
-
-        localStorage.setItem(
-
-            "email",
-
-            response.data.email
-
-        );
-
-        if (
-
-            response.data.role === "Candidate"
-
-        ) {
-
-            navigate(
-
-                "/student-dashboard"
-
-            );
-
+        if (role === "Candidate") {
+          navigate("/student-dashboard");
+        } else {
+          navigate("/dashboard");
         }
+        return;
+      }
 
-        else {
+      alert("Invalid Credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            navigate(
+  const demoLogin = async (emailValue, passwordValue) => {
+    try {
+      const response = await api.post("/api/auth/login", {
+        email: emailValue,
+        password: passwordValue
+      });
 
-                "/dashboard"
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("role", response.data.role);
+      localStorage.setItem("email", response.data.email);
 
-            );
+      if (response.data.role === "Candidate") {
+        navigate("/student-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch {
+      // Fallback for Vercel Demo / Offline Mode!
+      const normalizedEmail = emailValue?.trim().toLowerCase();
+      const normalizedPassword = passwordValue?.trim();
+      if (
+        (normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||
+        (normalizedEmail === "hr@gmail.com" && normalizedPassword === "123456") ||
+        (normalizedEmail === "candidate@gmail.com" && normalizedPassword === "123456")
+      ) {
+        let role = "Candidate";
+        if (normalizedEmail === "admin@gmail.com") role = "Admin";
+        else if (normalizedEmail === "hr@gmail.com") role = "HR";
 
+        localStorage.setItem("token", "mock-demo-token");
+        localStorage.setItem("role", role);
+        localStorage.setItem("email", normalizedEmail);
+
+        if (role === "Candidate") {
+          navigate("/student-dashboard");
+        } else {
+          navigate("/dashboard");
         }
+        return;
+      }
 
+      alert("Demo Login Failed");
     }
-
-    catch {
-
-        // Fallback for Vercel Demo / Offline Mode!
-        // If the backend API fails (e.g. because we are running on Vercel and backend is on localhost, or DB is down),
-        // we can authenticate locally for the demo credentials.
-        const normalizedEmail = emailValue?.trim().toLowerCase();
-        const normalizedPassword = passwordValue?.trim();
-        if (
-            (normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||
-            (normalizedEmail === "hr@gmail.com" && normalizedPassword === "123456") ||
-            (normalizedEmail === "candidate@gmail.com" && normalizedPassword === "123456")
-        ) {
-            let role = "Candidate";
-            if (normalizedEmail === "admin@gmail.com") role = "Admin";
-            else if (normalizedEmail === "hr@gmail.com") role = "HR";
-
-            localStorage.setItem("token", "mock-demo-token");
-            localStorage.setItem("role", role);
-            localStorage.setItem("email", normalizedEmail);
-
-            if (role === "Candidate") {
-                navigate("/student-dashboard");
-            } else {
-                navigate("/dashboard");
-            }
-            return;
-        }
-
-        alert(
-
-            "Demo Login Failed"
-
-        );
-
-    }
-
-};
-
-    return (
-
-        <div
-
-            className="container-fluid"
-
-            style={{
-
-                minHeight: "100vh",
-
-                background:
-
-                "linear-gradient(135deg,#111827,#1F2937,#2563EB)"
-
-            }}
-
-        >
-
-            <div className="row min-vh-100">
-
-
-                {/* LEFT SIDE */}
-
-                <div className="col-md-7 d-flex flex-column justify-content-center text-white p-5">
-
-                    <FaRobot
-
-                        size={80}
-
-                        className="mb-4"
-
-                    />
-
-
-                    <h1 className="fw-bold">
-
-                        AI Hiring Software
-
-                    </h1>
-
-
-                    <h4 className="mb-4">
-
-                        Smart Recruitment Platform
-
-                    </h4>
-
-
-                    <div className="mt-3">
-
-                        <h5>
-
-                            <FaCheckCircle className="text-success me-2" />
-
-                            AI Resume Parsing
-
-                        </h5>
-
-                        <h5>
-
-                            <FaChartLine className="text-success me-2" />
-
-                            Match Score Generation
-
-                        </h5>
-
-                        <h5>
-
-                            <FaUsers className="text-success me-2" />
-
-                            Candidate Ranking
-
-                        </h5>
-
-                        <h5>
-
-                            <FaBriefcase className="text-success me-2" />
-
-                            Interview Scheduling
-
-                        </h5>
-
-                    </div>
-
-                </div>
-
-
-                {/* RIGHT SIDE */}
-
-                <div className="col-md-5 d-flex justify-content-center align-items-center">
-
-                    <div
-
-                        className="card border-0 shadow p-5"
-
-                        style={{
-
-                            width: "450px",
-
-                            borderRadius: "25px",
-
-                            background:
-
-                            "rgba(255,255,255,.15)",
-
-                            backdropFilter:
-
-                            "blur(15px)"
-
-                        }}
-
-                    >
-
-                        <h2 className="text-center text-white mb-4">
-
-                            Login
-
-                        </h2>
-
-
-                        <form onSubmit={handleLogin}>
-
-                            <div className="mb-3">
-
-                                <input
-
-                                    type="email"
-
-                                    className="form-control"
-
-                                    placeholder="Enter Email"
-
-                                    value={email}
-
-                                    onChange={(e)=>
-
-                                        setEmail(
-
-                                            e.target.value
-
-                                        )
-
-                                    }
-
-                                />
-
-                            </div>
-
-
-                            <div className="mb-4">
-
-                                <input
-
-                                    type="password"
-
-                                    className="form-control"
-
-                                    placeholder="Enter Password"
-
-                                    value={password}
-
-                                    onChange={(e)=>
-
-                                        setPassword(
-
-                                            e.target.value
-
-                                        )
-
-                                    }
-
-                                />
-
-                            </div>
-
-
-                            <button
-
-                                className="btn btn-primary w-100"
-                                disabled={loading}
-
-                            >
-
-                                {loading ? "Signing in..." : "Login"}
-
-                            </button>
-
-                            <hr className="my-4" />
-
-                            <h5 className="text-center text-white mb-3">
-                                Demo Login
-                            </h5>
-                            <button
-
-    type="button"
-
-    className="btn btn-info w-100 mt-2"
-
-    onClick={() =>
-
-        demoLogin(
-
-            "admin@gmail.com",
-
-            "admin123"
-
-        )
-
-    }
-
->
-
-    Admin Demo
-
-</button>
-
-                            <button
-
-    type="button"
-
-    className="btn btn-success w-100 mt-2"
-
-    onClick={() =>
-
-        demoLogin(
-
-            "hr@gmail.com",
-
-            "123456"
-
-        )
-
-    }
-
->
-
-    HR Demo
-
-</button>
-
-<button
-
-    type="button"
-
-    className="btn btn-danger w-100 mt-2"
-
-    onClick={() =>
-
-        demoLogin(
-
-            "candidate@gmail.com",
-
-            "123456"
-
-        )
-
-    }
-
->
-
-    Candidate Demo
-
-</button>
-
-                            <hr className="my-4" />
-
-
-                            <button
-
-                                type="button"
-
-                                className="btn btn-outline-light w-100 mt-3"
-
-                                onClick={()=>
-
-                                    navigate(
-
-                                        "/register"
-
-                                    )
-
-                                }
-
-                            >
-
-                                Register
-
-                            </button>
-
-                        </form>
-
-                    </div>
-
-                </div>
-
+  };
+
+  return (
+    <div
+      className="container-fluid"
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #0f172a, #1e293b, #2563eb)",
+        display: "flex",
+        alignItems: "center"
+      }}
+    >
+      <div className="container">
+        <div className="row align-items-center min-vh-100 py-5">
+          {/* LEFT SIDE */}
+          <div className="col-md-7 text-white pe-lg-5 mb-5 mb-md-0" data-aos="fade-right">
+            <FaRobot size={64} className="mb-4 text-info" />
+            <h1 className="fw-bold display-4 mb-2" style={{ fontFamily: "var(--font-sans)" }}>
+              AI Hiring Suite
+            </h1>
+            <h4 className="text-light opacity-75 mb-4">
+              Smart Recruitment & Applicant Tracking System
+            </h4>
+            <div className="d-flex flex-column gap-3 mt-4">
+              <h5 className="d-flex align-items-center gap-2">
+                <FaCheckCircle className="text-success" />
+                AI Resume Parsing
+              </h5>
+              <h5 className="d-flex align-items-center gap-2">
+                <FaChartLine className="text-success" />
+                Match Score Generation
+              </h5>
+              <h5 className="d-flex align-items-center gap-2">
+                <FaUsers className="text-success" />
+                Candidate Ranking
+              </h5>
+              <h5 className="d-flex align-items-center gap-2">
+                <FaBriefcase className="text-success" />
+                Interview Scheduling
+              </h5>
             </div>
+          </div>
 
+          {/* RIGHT SIDE */}
+          <div className="col-md-5 d-flex justify-content-center" data-aos="fade-left">
+            <Card
+              style={{
+                width: "100%",
+                maxWidth: "450px",
+                background: "rgba(255, 255, 255, 0.1)",
+                backdropFilter: "blur(16px)",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                borderRadius: "var(--radius-lg)"
+              }}
+            >
+              <CardContent className="p-4 p-md-5 text-white">
+                <h2 className="text-center fw-bold mb-4" style={{ fontFamily: "var(--font-sans)" }}>
+                  Sign In
+                </h2>
+
+                <form onSubmit={handleLogin}>
+                  <Input
+                    id="email"
+                    type="email"
+                    label="Email Address"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff" }}
+                  />
+
+                  <div className="position-relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      label="Password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", paddingRight: "45px" }}
+                    />
+                    <button
+                      type="button"
+                      className="btn-custom btn-custom-ghost p-1 position-absolute text-light"
+                      style={{
+                        right: "10px",
+                        top: "38px",
+                        border: "none",
+                        background: "transparent",
+                        fontSize: "0.85rem",
+                        color: "rgba(255,255,255,0.6)",
+                      }}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-100 mt-2"
+                    loading={loading}
+                  >
+                    Sign In
+                  </Button>
+
+                  <div className="my-4 text-center">
+                    <hr style={{ borderColor: "rgba(255,255,255,0.15)" }} />
+                    <span className="bg-transparent px-2 text-light opacity-50" style={{ fontSize: "0.85rem" }}>
+                      Or Continue With
+                    </span>
+                  </div>
+
+                  <div className="d-flex flex-column gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-100"
+                      style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff" }}
+                      onClick={() => demoLogin("admin@gmail.com", "admin123")}
+                    >
+                      Admin Demo Account
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-100"
+                      style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff" }}
+                      onClick={() => demoLogin("hr@gmail.com", "123456")}
+                    >
+                      HR Demo Account
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-100"
+                      style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff" }}
+                      onClick={() => demoLogin("candidate@gmail.com", "123456")}
+                    >
+                      Candidate Demo Account
+                    </Button>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-100 mt-4 text-light text-decoration-none"
+                    style={{ color: "rgba(255,255,255,0.75)" }}
+                    onClick={() => navigate("/register")}
+                  >
+                    Don't have an account? Register
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-    );
-
+      </div>
+    </div>
+  );
 }
 
 export default Login;
