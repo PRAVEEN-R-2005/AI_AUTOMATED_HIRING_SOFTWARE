@@ -95,9 +95,9 @@ test("Authentication Controller Tests", async (t) => {
             }, 50);
         });
 
-        assert.strictEqual(res.statusCode, 409);
+        assert.strictEqual(res.statusCode, 400);
         assert.strictEqual(res.jsonData.success, false);
-        assert.match(res.jsonData.message, /Email is already registered/);
+        assert.match(res.jsonData.message, /Email already registered/);
     });
 
     await t.test("Fail registration with short password", async () => {

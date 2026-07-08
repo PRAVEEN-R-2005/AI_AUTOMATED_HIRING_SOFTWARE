@@ -41,91 +41,122 @@ const registerUser = async (req, res) => {
             `;
 
             db.query(selectInviteSql, [tokenHash], (err, invites) => {
-                if (err || !invites || invites.length === 0) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Invalid or expired invitation token"
-                    });
-                }
-
-                const invite = invites[0];
-                const isExpired = new Date() > new Date(invite.expires_at);
-                if (isExpired) {
-                    db.query("UPDATE invitations SET status = 'EXPIRED' WHERE id = ?", [invite.id]);
-                    return res.status(400).json({
-                        success: false,
-                        message: "This invitation has expired. Please contact your administrator."
-                    });
-                }
-
-                // Force email and role to match invitation to prevent privilege escalation
-                const finalEmail = invite.email;
-                const finalRole = invite.role;
-
-                // Create User
-                User.createUser(
-                    name.trim(),
-                    finalEmail,
-                    hashedPassword,
-                    finalRole,
-                    (usrErr, usrResult) => {
-                        if (usrErr) {
-                            if (usrErr.code === "ER_DUP_ENTRY") {
-                                return res.status(409).json({
-                                    success: false,
-                                    message: "Email is already registered"
-                                });
-                            }
-                            return res.status(500).json({
-                                success: false,
-                                message: "Registration Failed"
-                            });
-                        }
-
-                        const userId = usrResult.insertId;
-
-                        // Create Membership
-                        const insertMemberSql = `
-                            INSERT INTO memberships (user_id, organization_id, role, status)
-                            VALUES (?, ?, ?, 'ACTIVE')
-                        `;
-                        db.query(insertMemberSql, [userId, invite.organization_id, finalRole], (memErr) => {
-                            if (memErr) {
-                                console.error("Error creating membership on invite accept:", memErr);
-                            }
-
-                            // Mark Invitation as Accepted
-                            db.query(
-                                "UPDATE invitations SET status = 'ACCEPTED', accepted_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                [invite.id]
-                            );
-
-                            // Create Activity
-                            db.query(
-                                "INSERT INTO activities (action, details, organization_id) VALUES ('Member Joined', ?, ?)",
-                                [`${name.trim()} joined the workspace via invitation`, invite.organization_id]
-                            );
-
-                            // Log Audit Event
-                            logAuditEvent({
-                                organizationId: invite.organization_id,
-                                actorId: userId,
-                                actorName: name.trim(),
-                                actorEmail: finalEmail,
-                                eventCategory: "TEAM",
-                                action: "INVITATION_ACCEPTED",
-                                resourceType: "USER",
-                                resourceId: userId,
-                                metadata: { email: finalEmail, role: finalRole }
-                            });
-
-                            res.status(201).json({
-                                success: true,
-                                message: "User Registered and Workspace Membership Created Successfully"
-                            });
+                try {
+                    if (err || !invites || invites.length === 0) {
+                        return res.status(400).json({
+                            success: false,
+                            message: "Invalid or expired invitation token"
                         });
                     }
-                );
+
+                    const invite = invites[0];
+                    const isExpired = new Date() > new Date(invite.expires_at);
+                    if (isExpired) {
+                        db.query("UPDATE invitations SET status = 'EXPIRED' WHERE id = ?", [invite.id]);
+                        return res.status(400).json({
+                            success: false,
+                            message: "This invitation has expired. Please contact your administrator."
+                        });
+                    }
+
+                    // Force email and role to match invitation to prevent privilege escalation
+                    const finalEmail = invite.email;
+                    const finalRole = invite.role;
+
+                    // Create User
+                    User.createUser(
+                        name.trim(),
+                        finalEmail,
+                        hashedPassword,
+                        finalRole,
+                        (usrErr, usrResult) => {
+                            try {
+                                if (usrErr) {
+                                    if (usrErr.code === "ER_DUP_ENTRY") {
+                                        return res.status(400).json({
+                                            success: false,
+                                            message: "Email already registered"
+                                        });
+                                    }
+                                    console.error("Database error during user creation:", usrErr);
+                                    return res.status(500).json({
+                                        success: false,
+                                        message: "Registration Failed"
+                                    });
+                                }
+
+                                const userId = usrResult.insertId;
+
+                                // Create Membership
+                                const insertMemberSql = `
+                                    INSERT INTO memberships (user_id, organization_id, role, status)
+                                    VALUES (?, ?, ?, 'ACTIVE')
+                                `;
+                                db.query(insertMemberSql, [userId, invite.organization_id, finalRole], (memErr) => {
+                                    try {
+                                        if (memErr) {
+                                            console.error("Error creating membership on invite accept:", memErr);
+                                        }
+
+                                        // Mark Invitation as Accepted
+                                        db.query(
+                                            "UPDATE invitations SET status = 'ACCEPTED', accepted_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                            [invite.id]
+                                        );
+
+                                        // Create Activity
+                                        db.query(
+                                            "INSERT INTO activities (action, details, organization_id) VALUES ('Member Joined', ?, ?)",
+                                            [`${name.trim()} joined the workspace via invitation`, invite.organization_id]
+                                        );
+
+                                        // Log Audit Event
+                                        logAuditEvent({
+                                            organizationId: invite.organization_id,
+                                            actorId: userId,
+                                            actorName: name.trim(),
+                                            actorEmail: finalEmail,
+                                            eventCategory: "TEAM",
+                                            action: "INVITATION_ACCEPTED",
+                                            resourceType: "USER",
+                                            resourceId: userId,
+                                            metadata: { email: finalEmail, role: finalRole }
+                                        });
+
+                                        res.status(201).json({
+                                            success: true,
+                                            message: "User Registered and Workspace Membership Created Successfully"
+                                        });
+                                    } catch (memCallbackErr) {
+                                        console.error("Unexpected error in membership creation callback:", memCallbackErr);
+                                        if (!res.headersSent) {
+                                            res.status(500).json({
+                                                success: false,
+                                                message: "Registration failed due to an unexpected internal error"
+                                            });
+                                        }
+                                    }
+                                });
+                            } catch (usrCallbackErr) {
+                                console.error("Unexpected error in createUser callback:", usrCallbackErr);
+                                if (!res.headersSent) {
+                                    res.status(500).json({
+                                        success: false,
+                                        message: "Registration failed due to an unexpected internal error"
+                                    });
+                                }
+                            }
+                        }
+                    );
+                } catch (inviteCallbackErr) {
+                    console.error("Unexpected error in selectInvite callback:", inviteCallbackErr);
+                    if (!res.headersSent) {
+                        res.status(500).json({
+                            success: false,
+                            message: "Registration failed due to an unexpected internal error"
+                        });
+                    }
+                }
             });
 
         } else {
@@ -167,82 +198,113 @@ const registerUser = async (req, res) => {
                 hashedPassword,
                 role,
                 (usrErr, usrResult) => {
-                    if (usrErr) {
-                        if (usrErr.code === "ER_DUP_ENTRY") {
-                            return res.status(409).json({
-                                success: false,
-                                message: "Email is already registered"
-                            });
-                        }
-                        return res.status(500).json({
-                            success: false,
-                            message: "Registration Failed"
-                        });
-                    }
-
-                    const userId = usrResult.insertId;
-
-                    if (role === "Admin" || role === "HR" || role === "Recruiter") {
-                        // Create a new Organization for the self-registered Recruiter/Admin
-                        const orgName = `${name.trim()}'s Workspace`;
-                        const orgSlug = `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-4)}`;
-
-                        const insertOrgSql = "INSERT INTO organizations (name, slug, status) VALUES (?, ?, 'ACTIVE')";
-                        db.query(insertOrgSql, [orgName, orgSlug], (orgErr, orgResult) => {
-                            if (orgErr) {
-                                console.error("Failed to create organization:", orgErr);
-                                return res.status(201).json({
-                                    success: true,
-                                    message: "User Registered Successfully (Workspace creation failed)"
+                    try {
+                        if (usrErr) {
+                            if (usrErr.code === "ER_DUP_ENTRY") {
+                                return res.status(400).json({
+                                    success: false,
+                                    message: "Email already registered"
                                 });
                             }
-
-                            const orgId = orgResult.insertId;
-                            const orgRole = role === "HR" ? "Recruiter" : role;
-
-                            // Create Admin Membership
-                            const insertMemberSql = `
-                                INSERT INTO memberships (user_id, organization_id, role, status)
-                                VALUES (?, ?, ?, 'ACTIVE')
-                            `;
-                            db.query(insertMemberSql, [userId, orgId, orgRole], (memErr) => {
-                                if (memErr) console.error("Failed to create admin membership:", memErr);
-                                
-                                logAuditEvent({
-                                    organizationId: orgId,
-                                    actorId: userId,
-                                    actorName: name.trim(),
-                                    actorEmail: normalizedEmail,
-                                    eventCategory: "AUTHENTICATION",
-                                    action: "USER_REGISTERED",
-                                    resourceType: "USER",
-                                    resourceId: userId,
-                                    metadata: { email: normalizedEmail, role, organizationName: orgName }
-                                });
-
-                                res.status(201).json({
-                                    success: true,
-                                    message: "User Registered and Workspace Initialized Successfully"
-                                });
+                            console.error("Database error during user creation:", usrErr);
+                            return res.status(500).json({
+                                success: false,
+                                message: "Registration Failed"
                             });
-                        });
-                    } else {
-                        // Candidate registration (no organization workspace needed)
-                        logAuditEvent({
-                            actorId: userId,
-                            actorName: name.trim(),
-                            actorEmail: normalizedEmail,
-                            eventCategory: "AUTHENTICATION",
-                            action: "USER_REGISTERED",
-                            resourceType: "USER",
-                            resourceId: userId,
-                            metadata: { email: normalizedEmail, role }
-                        });
+                        }
 
-                        res.status(201).json({
-                            success: true,
-                            message: "User Registered Successfully"
-                        });
+                        const userId = usrResult.insertId;
+
+                        if (role === "Admin" || role === "HR" || role === "Recruiter") {
+                            // Create a new Organization for the self-registered Recruiter/Admin
+                            const orgName = `${name.trim()}'s Workspace`;
+                            const orgSlug = `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-4)}`;
+
+                            const insertOrgSql = "INSERT INTO organizations (name, slug, status) VALUES (?, ?, 'ACTIVE')";
+                            db.query(insertOrgSql, [orgName, orgSlug], (orgErr, orgResult) => {
+                                try {
+                                    if (orgErr) {
+                                        console.error("Failed to create organization:", orgErr);
+                                        return res.status(201).json({
+                                            success: true,
+                                            message: "User Registered Successfully (Workspace creation failed)"
+                                        });
+                                    }
+
+                                    const orgId = orgResult.insertId;
+                                    const orgRole = role === "HR" ? "Recruiter" : role;
+
+                                    // Create Admin Membership
+                                    const insertMemberSql = `
+                                        INSERT INTO memberships (user_id, organization_id, role, status)
+                                        VALUES (?, ?, ?, 'ACTIVE')
+                                    `;
+                                    db.query(insertMemberSql, [userId, orgId, orgRole], (memErr) => {
+                                        try {
+                                            if (memErr) console.error("Failed to create admin membership:", memErr);
+                                            
+                                            logAuditEvent({
+                                                organizationId: orgId,
+                                                actorId: userId,
+                                                actorName: name.trim(),
+                                                actorEmail: normalizedEmail,
+                                                eventCategory: "AUTHENTICATION",
+                                                action: "USER_REGISTERED",
+                                                resourceType: "USER",
+                                                resourceId: userId,
+                                                metadata: { email: normalizedEmail, role, organizationName: orgName }
+                                            });
+
+                                            res.status(201).json({
+                                                success: true,
+                                                message: "User Registered and Workspace Initialized Successfully"
+                                            });
+                                        } catch (memCallbackErr) {
+                                            console.error("Unexpected error in membership creation callback:", memCallbackErr);
+                                            if (!res.headersSent) {
+                                                res.status(500).json({
+                                                    success: false,
+                                                    message: "Registration failed due to an unexpected internal error"
+                                                });
+                                            }
+                                        }
+                                    });
+                                } catch (orgCallbackErr) {
+                                    console.error("Unexpected error in organization creation callback:", orgCallbackErr);
+                                    if (!res.headersSent) {
+                                        res.status(500).json({
+                                            success: false,
+                                            message: "Registration failed due to an unexpected internal error"
+                                        });
+                                    }
+                                }
+                            });
+                        } else {
+                            // Candidate registration (no organization workspace needed)
+                            logAuditEvent({
+                                actorId: userId,
+                                actorName: name.trim(),
+                                actorEmail: normalizedEmail,
+                                eventCategory: "AUTHENTICATION",
+                                action: "USER_REGISTERED",
+                                resourceType: "USER",
+                                resourceId: userId,
+                                metadata: { email: normalizedEmail, role }
+                            });
+
+                            res.status(201).json({
+                                success: true,
+                                message: "User Registered Successfully"
+                            });
+                        }
+                    } catch (usrCallbackErr) {
+                        console.error("Unexpected error in createUser callback:", usrCallbackErr);
+                        if (!res.headersSent) {
+                            res.status(500).json({
+                                success: false,
+                                message: "Registration failed due to an unexpected internal error"
+                            });
+                        }
                     }
                 }
             );
