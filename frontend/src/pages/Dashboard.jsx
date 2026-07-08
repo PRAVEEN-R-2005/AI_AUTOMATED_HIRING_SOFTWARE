@@ -31,7 +31,8 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  BarElement
+  BarElement,
+  Filler
 } from "chart.js";
 
 import { Doughnut, Line, Bar } from "react-chartjs-2";
@@ -44,7 +45,8 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  BarElement
+  BarElement,
+  Filler
 );
 
 function Dashboard() {

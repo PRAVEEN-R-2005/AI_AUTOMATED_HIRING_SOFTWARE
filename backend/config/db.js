@@ -248,6 +248,9 @@ initConnection.connect((err) => {
             await new Promise((resolve) => {
                 initConnection.query("ALTER TABLE applications ADD COLUMN rejection_reason TEXT DEFAULT NULL", () => resolve());
             });
+            await new Promise((resolve) => {
+                initConnection.query("ALTER TABLE applications ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP", () => resolve());
+            });
 
             // Self-healing columns for AI screening insights
             const aiColumns = [

@@ -25,8 +25,10 @@ const analyzeResumeAgainstJD = async (resumePath, jd) => {
       throw new Error(`Unsupported file type (${ext}). Only PDF files are supported for automated AI screening.`);
     }
     const dataBuffer = fs.readFileSync(resumePath);
-    const parsedPdf = await pdfParse(dataBuffer);
+    const parser = new pdfParse.PDFParse({ data: dataBuffer });
+    const parsedPdf = await parser.getText();
     resumeText = parsedPdf.text || "";
+    await parser.destroy();
     console.log("[AI Screening] Stage 1 (PDF Parsing) successful.");
   } catch (parseErr) {
     console.error("[AI Screening] Stage 1 (PDF Parsing) failed:", parseErr);
@@ -210,7 +212,7 @@ const runAI = async (req, res) => {
       async (err, apps) => {
         if (err || !apps || apps.length === 0) {
           console.error(`[AI Screening Failure] [ID: ${reqId}] [Time: ${timestamp}] Application ID ${id} not found in database:`, err);
-          return res.status(404).json({ message: "Candidate application record not found." });
+          return res.status(404).json({ success: false, message: "Candidate or application not found" });
         }
 
         const app = apps[0];
@@ -219,7 +221,7 @@ const runAI = async (req, res) => {
 
         if (!resumeFile) {
           console.error(`[AI Screening Failure] [ID: ${reqId}] [Time: ${timestamp}] Application ID ${id} has no resume file on record.`);
-          return res.status(400).json({ message: "Candidate application record does not contain an uploaded resume file." });
+          return res.status(400).json({ success: false, message: "Candidate application record does not contain an uploaded resume file." });
         }
 
         db.query(
@@ -228,7 +230,7 @@ const runAI = async (req, res) => {
           async (err, jds) => {
             if (err || !jds || jds.length === 0) {
               console.error(`[AI Screening Failure] [ID: ${reqId}] [Time: ${timestamp}] Job Requisition ID ${jobId} not found.`);
-              return res.status(404).json({ message: "Associated job description not found." });
+              return res.status(404).json({ success: false, message: "Associated job description not found." });
             }
 
             const jd = jds[0];
@@ -236,7 +238,7 @@ const runAI = async (req, res) => {
 
             if (!fs.existsSync(resumePath)) {
               console.error(`[AI Screening Failure] [ID: ${reqId}] [Time: ${timestamp}] Resume file not found on disk at: ${resumePath}`);
-              return res.status(404).json({ message: `Resume document file was not found on the storage server.` });
+              return res.status(404).json({ success: false, message: "Resume document file was not found on the storage server." });
             }
 
             try {
