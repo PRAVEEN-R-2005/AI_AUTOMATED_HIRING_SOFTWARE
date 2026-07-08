@@ -60,10 +60,19 @@ const storage = multer.diskStorage({
 
 
 const upload = multer({
-
-    storage
-
+    storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5 MB max size limit
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.fieldname === "resume_file") {
+            const fileext = path.extname(file.originalname).toLowerCase();
+            if (fileext !== ".pdf" || file.mimetype !== "application/pdf") {
+                return cb(new Error("Only PDF resume files are supported!"), false);
+            }
+        }
+        cb(null, true);
+    }
 });
-
 
 module.exports = upload;

@@ -63,8 +63,52 @@ const createApplication = (req, res) => {
     const { candidate_name, email, phone, job_id } = req.body;
     const resume_file = req.file ? req.file.filename : null;
 
+    // Helper to delete file on validation failure
+    const deleteUploadedFile = () => {
+        if (req.file) {
+            const fs = require("fs");
+            const path = require("path");
+            const filePath = path.join(__dirname, "../uploads/resumes", req.file.filename);
+            fs.unlink(filePath, (err) => {
+                if (err) console.error("Error deleting file after validation failure:", err);
+            });
+        }
+    };
+
+    if (!candidate_name || !candidate_name.trim()) {
+        deleteUploadedFile();
+        return res.status(400).json({ message: "Candidate name is required" });
+    }
+
+    if (!email || !email.trim()) {
+        deleteUploadedFile();
+        return res.status(400).json({ message: "Email is required" });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+        deleteUploadedFile();
+        return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    if (!phone || !phone.trim()) {
+        deleteUploadedFile();
+        return res.status(400).json({ message: "Phone number is required" });
+    }
+
+    const phoneRegex = /^\+?[0-9\s\-()]{7,20}$/;
+    if (!phoneRegex.test(phone.trim())) {
+        deleteUploadedFile();
+        return res.status(400).json({ message: "Invalid phone number format. Please provide a valid phone number." });
+    }
+
     if (!job_id) {
+        deleteUploadedFile();
         return res.status(400).json({ message: "Job Requisition ID is required" });
+    }
+
+    if (!resume_file) {
+        return res.status(400).json({ message: "Resume file upload is required" });
     }
 
     // Look up organization ID of the job requisition being applied to

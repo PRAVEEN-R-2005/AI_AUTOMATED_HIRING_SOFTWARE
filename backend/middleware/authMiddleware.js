@@ -15,7 +15,7 @@ const verifyToken = (req, res, next) => {
 
     try {
         const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret && process.env.NODE_ENV === "production") {
+        if (!jwtSecret) {
             return res.status(500).json({
                 success: false,
                 message: "Internal Server Configuration Error: Secure token configuration missing."
@@ -23,7 +23,7 @@ const verifyToken = (req, res, next) => {
         }
         const decoded = jwt.verify(
             token,
-            jwtSecret || "praveen_secret_key"
+            jwtSecret
         );
         
         // Fetch current active user state and membership from database in real-time

@@ -271,7 +271,7 @@ const loginUser = (req, res) => {
     const normalizedPassword = password.trim();
 
     // Backend-side bypass for demo credentials (works even if database is empty/unseeded)
-    const isDemoBypassAllowed = process.env.NODE_ENV !== "production" || process.env.ALLOW_DEMO_BYPASS === "true";
+    const isDemoBypassAllowed = process.env.DEMO_MODE === "true";
     if (
         isDemoBypassAllowed &&
         ((normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||
@@ -289,7 +289,7 @@ const loginUser = (req, res) => {
         }
 
         const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret && process.env.NODE_ENV === "production") {
+        if (!jwtSecret) {
             return res.status(500).json({
                 success: false,
                 message: "Internal Server Configuration Error: Secure token configuration missing."
@@ -298,7 +298,7 @@ const loginUser = (req, res) => {
 
         const token = jwt.sign(
             { id: normalizedEmail === "admin@gmail.com" ? 1 : normalizedEmail === "hr@gmail.com" ? 2 : 3, role, email: normalizedEmail, organization_id: orgId },
-            jwtSecret || "praveen_secret_key",
+            jwtSecret,
             { expiresIn: "1d" }
         );
 
@@ -409,7 +409,7 @@ const loginUser = (req, res) => {
             }
 
             const jwtSecret = process.env.JWT_SECRET;
-            if (!jwtSecret && process.env.NODE_ENV === "production") {
+            if (!jwtSecret) {
                 return res.status(500).json({
                     success: false,
                     message: "Internal Server Configuration Error: Secure token configuration missing."
@@ -423,7 +423,7 @@ const loginUser = (req, res) => {
                     email: user.email,
                     organization_id: orgId
                 },
-                jwtSecret || "praveen_secret_key",
+                jwtSecret,
                 {
                     expiresIn: "1d"
                 }

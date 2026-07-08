@@ -52,9 +52,10 @@ Copy `.env.example` to `.env` in the `backend` folder and configure database cre
 PORT=5000
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=your_secure_password
+DB_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 DB_NAME=hr_hiring_system
-JWT_SECRET=your_jwt_secret_key
+JWT_SECRET=YOUR_JWT_SECRET_HERE
+DEMO_MODE=false # Set to true to enable bypass login buttons for admin@gmail.com, hr@gmail.com, candidate@gmail.com
 ```
 
 ### 3. Install and Launch Backend
