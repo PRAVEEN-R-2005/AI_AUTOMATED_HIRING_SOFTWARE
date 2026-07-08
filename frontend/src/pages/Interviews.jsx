@@ -125,6 +125,7 @@ function Interviews() {
     try {
       const payload = {
         candidate_id: app.id,
+        application_id: app.id,
         candidate_name: app.candidate_name,
         email: app.email,
         phone: app.phone || "N/A",
@@ -134,10 +135,11 @@ function Interviews() {
         mode: formMode,
         interviewer: formInterviewer,
         round: formRound,
-        duration: parseInt(formDuration, 10),
+        duration: formDuration,
         meeting_link: formMode === "Video Call" ? formMeetingLink : null
       };
 
+      console.log("[Interviews] Scheduling payload:", payload);
       await api.post("/api/interviews", payload);
       alert("Interview scheduled successfully! Candidate status updated to 'Interview'.");
       
@@ -148,8 +150,9 @@ function Interviews() {
       
       loadData();
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to schedule interview. Check scheduling conflicts.");
+      console.error("[Interviews] Scheduling failed:", err);
+      const backendMessage = err.response?.data?.message || err.response?.data?.error || "Failed to schedule interview. Check scheduling conflicts.";
+      alert(backendMessage);
     } finally {
       setScheduling(false);
     }

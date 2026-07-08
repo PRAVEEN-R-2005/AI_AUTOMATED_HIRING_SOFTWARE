@@ -2,6 +2,64 @@ const Interview = require("../models/interviewModel");
 const db = require("../config/db");
 const { notifyRecruiters, createNotification } = require("../utils/notifier");
 
+const normalizeInterviewPayload = (body = {}) => {
+    const candidateId = Number(body.candidate_id ?? body.candidateId ?? body.application_id ?? body.applicationId ?? body.id ?? 0);
+    const candidateName = body.candidate_name ?? body.candidateName ?? body.name ?? "";
+    const email = body.email ?? body.candidate_email ?? body.candidateEmail ?? "";
+    const phone = body.phone ?? body.contact_number ?? body.contactNumber ?? "N/A";
+    const aiScore = Number(body.ai_score ?? body.aiScore ?? body.match_score ?? body.matchScore ?? 0);
+
+    const rawDate = body.interview_date ?? body.scheduledDate ?? body.date ?? "";
+    let interviewDate = "";
+    if (typeof rawDate === "string") {
+        const trimmed = rawDate.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            interviewDate = trimmed;
+        } else if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+            const [day, month, year] = trimmed.split("-");
+            interviewDate = `${year}-${month}-${day}`;
+        } else {
+            const parsed = new Date(trimmed);
+            if (!Number.isNaN(parsed.getTime())) {
+                interviewDate = parsed.toISOString().slice(0, 10);
+            }
+        }
+    }
+
+    const rawTime = body.interview_time ?? body.startTime ?? body.time ?? "";
+    const interviewTime = typeof rawTime === "string" ? rawTime.trim() : "";
+
+    const rawDuration = body.duration ?? body.durationMinutes ?? body.duration_min ?? body.durationValue ?? body.duration_minutes ?? "";
+    let duration = 30;
+    if (typeof rawDuration === "string") {
+        const parsed = rawDuration.match(/(\d+)/);
+        duration = parsed ? Number(parsed[1]) : 30;
+    } else if (typeof rawDuration === "number") {
+        duration = rawDuration;
+    }
+
+    const mode = body.mode ?? body.interviewType ?? body.interview_type ?? "Video Call";
+    const round = body.round ?? body.roundType ?? body.round_type ?? "Technical Interview";
+    const interviewer = body.interviewer ?? body.interviewerName ?? body.interviewer_name ?? body.interviewerEmail ?? "";
+    const meetingLink = body.meeting_link ?? body.meetingLink ?? (mode === "Video Call" ? body.meeting_link || body.meetingLink || "" : null);
+
+    return {
+        candidate_id: Number.isNaN(candidateId) ? null : candidateId,
+        candidate_name: candidateName,
+        email,
+        phone,
+        ai_score: Number.isNaN(aiScore) ? 0 : aiScore,
+        interview_date: interviewDate,
+        interview_time: interviewTime,
+        mode,
+        interviewer,
+        round,
+        duration,
+        meeting_link: meetingLink || null,
+        status: "Scheduled"
+    };
+};
+
 // Helper to verify interview access (prevent cross-organization IDOR)
 const verifyInterviewAccess = (ivId, req, callback) => {
     const { role, organization_id, email } = req.user;
@@ -56,6 +114,7 @@ const verifyInterviewAccess = (ivId, req, callback) => {
 // CREATE INTERVIEW WITH CONFLICT CHECKING
 const createInterview = (req, res) => {
     const orgId = req.user.organization_id;
+    const payload = normalizeInterviewPayload(req.body);
     const {
         candidate_id,
         candidate_name,
@@ -65,11 +124,28 @@ const createInterview = (req, res) => {
         interview_date,
         interview_time,
         mode,
-        interviewer, // interviewer email or identifier
+        interviewer,
         round,
         duration,
-        meeting_link
-    } = req.body;
+        meeting_link,
+        status
+    } = payload;
+
+    console.log("[Interview] Scheduling request received:", {
+        candidate_id,
+        candidate_name,
+        interview_date,
+        interview_time,
+        interviewer,
+        round,
+        mode,
+        duration,
+        organization_id: orgId
+    });
+
+    if (!candidate_id) {
+        return res.status(400).json({ message: "A valid candidate or application is required." });
+    }
 
     if (!interviewer || !interview_date || !interview_time) {
         return res.status(400).json({ message: "Interviewer, date, and time are required." });
@@ -102,7 +178,7 @@ const createInterview = (req, res) => {
                 candidate_id, candidate_name, email, phone, ai_score, 
                 interview_date, interview_time, mode, interviewer, 
                 round, duration, meeting_link, status, organization_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Scheduled', ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         db.query(
@@ -110,12 +186,16 @@ const createInterview = (req, res) => {
             [
                 candidate_id, candidate_name, email, phone || "N/A", ai_score || 0,
                 interview_date, interview_time, mode, interviewer,
-                round || "Technical Interview", duration || 30, meeting_link || null, orgId
+                round || "Technical Interview", duration || 30, meeting_link || null, status, orgId
             ],
             (err, result) => {
                 if (err) {
                     console.error("Failed to create interview record:", err);
-                    return res.status(500).json({ message: "Interview Creation Failed" });
+                    return res.status(500).json({
+                        success: false,
+                        message: "Interview Creation Failed",
+                        error: process.env.NODE_ENV === "development" ? err.message : undefined
+                    });
                 }
 
                 const interviewId = result.insertId;
@@ -335,6 +415,7 @@ const getInterviewsByEmail = (req, res) => {
 };
 
 module.exports = {
+    normalizeInterviewPayload,
     createInterview,
     getAllInterviews,
     updateInterviewStatus,
