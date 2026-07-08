@@ -263,7 +263,8 @@ initConnection.connect((err) => {
                 "ALTER TABLE applications ADD COLUMN candidate_strengths TEXT DEFAULT NULL",
                 "ALTER TABLE applications ADD COLUMN review_considerations TEXT DEFAULT NULL",
                 "ALTER TABLE applications ADD COLUMN ai_summary TEXT DEFAULT NULL",
-                "ALTER TABLE applications ADD COLUMN recommendation VARCHAR(255) DEFAULT NULL"
+                "ALTER TABLE applications ADD COLUMN recommendation VARCHAR(255) DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN screening_status VARCHAR(50) DEFAULT 'PENDING'"
             ];
 
             for (const colSql of aiColumns) {

@@ -153,7 +153,15 @@ const getApplications = (req, res) => {
             console.error("Fetch Applications Error:", err);
             return res.status(500).json({ message: "Database Error" });
         }
-        res.status(200).json(results || []);
+
+        const normalizedResults = (results || []).map((app) => ({
+            ...app,
+            overallFit: app.match_score ?? app.overallFit ?? app.overall_score ?? null,
+            overallScore: app.match_score ?? app.overallScore ?? app.overall_fit ?? null,
+            screeningStatus: app.screening_status || (app.match_score !== null ? "Completed" : "Pending")
+        }));
+
+        res.status(200).json(normalizedResults);
     });
 };
 
@@ -184,16 +192,23 @@ const getApplicationByEmail = (req, res) => {
             return res.status(500).json({ message: "Database Error" });
         }
 
+        const normalizedResults = (results || []).map((app) => ({
+            ...app,
+            overallFit: app.match_score ?? app.overallFit ?? app.overall_score ?? null,
+            overallScore: app.match_score ?? app.overallScore ?? app.overall_fit ?? null,
+            screeningStatus: app.screening_status || (app.match_score !== null ? "Completed" : "Pending")
+        }));
+
         // Mask sensitive internal properties (recruiter notes, rejection reason) for candidates
         if (req.user.role === "Candidate") {
-            const masked = results.map(app => {
+            const masked = normalizedResults.map(app => {
                 const { recruiter_notes, rejection_reason, ...rest } = app;
                 return rest;
             });
             return res.status(200).json(masked);
         }
 
-        res.status(200).json(results || []);
+        res.status(200).json(normalizedResults);
     });
 };
 

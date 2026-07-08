@@ -13,6 +13,30 @@ const COMMON_TECH_SKILLS = [
   "git", "github", "jenkins", "terraform", "ansible", "graphql", "rest api", "linux"
 ];
 
+const normalizeAnalysisForPersistence = (analysis, defaultStatus = "Pending") => {
+  const overallFit = analysis.overallFit ?? analysis.weightedCompatibility ?? analysis.compatibilityScore ?? analysis.matchPercentage ?? analysis.overallScore ?? null;
+  const matchScore = analysis.matchScore ?? analysis.match_score ?? overallFit ?? analysis.overallScore ?? null;
+  const recommendation = analysis.recommendation || analysis.recommendationText || "Review Required";
+  const screeningStatus = analysis.screeningStatus || (matchScore !== null ? "Completed" : defaultStatus);
+
+  return {
+    overallFit,
+    overallScore: analysis.overallScore ?? overallFit ?? matchScore ?? null,
+    matchScore,
+    recommendation,
+    screeningStatus,
+    technicalSkillsFit: analysis.technicalSkillsFit ?? analysis.skillsScore ?? null,
+    experienceDurationAlignment: analysis.experienceDurationAlignment ?? analysis.experienceScore ?? null,
+    academicQualificationFit: analysis.academicQualificationFit ?? analysis.educationScore ?? null,
+    matchedSkills: analysis.matchedSkills ?? analysis.matched_skills ?? "",
+    missingSkills: analysis.missingSkills ?? analysis.missing_skills ?? "",
+    additionalSkills: analysis.additionalSkills ?? analysis.additional_skills ?? "",
+    strengths: analysis.strengths ?? "",
+    considerations: analysis.considerations ?? "",
+    aiSummary: analysis.aiSummary ?? analysis.ai_summary ?? ""
+  };
+};
+
 // Helper parser to compute matches
 const analyzeResumeAgainstJD = async (resumePath, jd) => {
   console.log(`[AI Screening] Starting resume analysis for path: ${resumePath}`);
@@ -243,31 +267,33 @@ const runAI = async (req, res) => {
 
             try {
               const analysis = await analyzeResumeAgainstJD(resumePath, jd);
+              const normalizedAnalysis = normalizeAnalysisForPersistence(analysis, "Pending");
 
-              // Update application record with match insights
               let status = app.status;
-              if (analysis.overallScore >= 75) status = "Shortlisted";
-              else if (analysis.overallScore < 40) status = "Rejected";
+              if (["Pending", "Screening"].includes(app.status)) {
+                status = normalizedAnalysis.overallScore >= 75 ? "Shortlisted" : normalizedAnalysis.overallScore < 40 ? "Rejected" : "Screening";
+              }
 
               db.query(
                 `UPDATE applications 
-                 SET match_score=?, status=?, skills_score=?, experience_score=?, education_score=?, 
+                 SET match_score=?, status=?, screening_status=?, skills_score=?, experience_score=?, education_score=?, 
                      matched_skills=?, missing_skills=?, additional_skills=?, candidate_strengths=?, 
                      review_considerations=?, ai_summary=?, recommendation=? 
                  WHERE id=?`,
                 [
-                  analysis.overallScore,
+                  normalizedAnalysis.matchScore,
                   status,
-                  analysis.skillsScore,
-                  analysis.experienceScore,
-                  analysis.educationScore,
-                  analysis.matchedSkills,
-                  analysis.missingSkills,
-                  analysis.additionalSkills,
-                  analysis.strengths,
-                  analysis.considerations,
-                  analysis.aiSummary,
-                  analysis.recommendation,
+                  normalizedAnalysis.screeningStatus,
+                  normalizedAnalysis.technicalSkillsFit,
+                  normalizedAnalysis.experienceDurationAlignment,
+                  normalizedAnalysis.academicQualificationFit,
+                  normalizedAnalysis.matchedSkills,
+                  normalizedAnalysis.missingSkills,
+                  normalizedAnalysis.additionalSkills,
+                  normalizedAnalysis.strengths,
+                  normalizedAnalysis.considerations,
+                  normalizedAnalysis.aiSummary,
+                  normalizedAnalysis.recommendation,
                   id
                 ],
                 (err, result) => {
@@ -278,8 +304,10 @@ const runAI = async (req, res) => {
 
                   res.status(200).json({
                     message: "AI Screening complete",
-                    ...analysis,
-                    status
+                    applicationId: Number(id),
+                    ...normalizedAnalysis,
+                    status,
+                    screeningStatus: normalizedAnalysis.screeningStatus
                   });
                 }
               );
@@ -328,18 +356,19 @@ const uploadAndRunAI = async (req, res) => {
 
         try {
           const analysis = await analyzeResumeAgainstJD(resumePath, jd);
+          const normalizedAnalysis = normalizeAnalysisForPersistence(analysis, "Pending");
 
           // Save a Quick Screen record to applications
           let status = "Pending";
-          if (analysis.overallScore >= 75) status = "Shortlisted";
-          else if (analysis.overallScore < 40) status = "Rejected";
+          if (normalizedAnalysis.overallScore >= 75) status = "Shortlisted";
+          else if (normalizedAnalysis.overallScore < 40) status = "Rejected";
 
           db.query(
             `INSERT INTO applications 
-             (candidate_name, email, phone, job_id, resume_file, status, match_score, skills_score, 
+             (candidate_name, email, phone, job_id, resume_file, status, screening_status, match_score, skills_score, 
               experience_score, education_score, matched_skills, missing_skills, additional_skills, 
               candidate_strengths, review_considerations, ai_summary, recommendation) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               "Quick Screen Profile",
               "quick.screen@recruitment.com",
@@ -347,17 +376,18 @@ const uploadAndRunAI = async (req, res) => {
               jobId,
               filename,
               status,
-              analysis.overallScore,
-              analysis.skillsScore,
-              analysis.experienceScore,
-              analysis.educationScore,
-              analysis.matchedSkills,
-              analysis.missingSkills,
-              analysis.additionalSkills,
-              analysis.strengths,
-              analysis.considerations,
-              analysis.aiSummary,
-              analysis.recommendation
+              normalizedAnalysis.screeningStatus,
+              normalizedAnalysis.matchScore,
+              normalizedAnalysis.technicalSkillsFit,
+              normalizedAnalysis.experienceDurationAlignment,
+              normalizedAnalysis.academicQualificationFit,
+              normalizedAnalysis.matchedSkills,
+              normalizedAnalysis.missingSkills,
+              normalizedAnalysis.additionalSkills,
+              normalizedAnalysis.strengths,
+              normalizedAnalysis.considerations,
+              normalizedAnalysis.aiSummary,
+              normalizedAnalysis.recommendation
             ],
             (err, result) => {
               if (err) {
@@ -368,8 +398,9 @@ const uploadAndRunAI = async (req, res) => {
               res.status(200).json({
                 message: "AI Screening Complete",
                 applicationId: result.insertId,
-                ...analysis,
-                status
+                ...normalizedAnalysis,
+                status,
+                screeningStatus: normalizedAnalysis.screeningStatus
               });
             }
           );
@@ -386,6 +417,7 @@ const uploadAndRunAI = async (req, res) => {
 };
 
 module.exports = {
+  normalizeAnalysisForPersistence,
   runAI,
   uploadAndRunAI
 };

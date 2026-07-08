@@ -191,8 +191,26 @@ function AICandidates() {
         response = await api.put(`/api/ai/run/${selectedAppId}`, {}, { timeout: 30000 });
       }
 
-      setAnalysisResult(response.data);
-      loadData(); // refresh list
+      const normalizedAnalysis = {
+        ...response.data,
+        overallScore: response.data.overallScore ?? response.data.overallFit ?? response.data.matchScore ?? response.data.match_score ?? null,
+        recommendation: response.data.recommendation || response.data.recommendationText || "Review Required",
+        screeningStatus: response.data.screeningStatus || (response.data.overallScore !== null || response.data.overallFit !== null ? "Completed" : "Pending")
+      };
+
+      setAnalysisResult(normalizedAnalysis);
+      const updatedAppId = response.data.applicationId ?? selectedAppId;
+      setApplications(prev => prev.map(app => Number(app.id) === Number(updatedAppId)
+        ? {
+            ...app,
+            match_score: normalizedAnalysis.matchScore ?? normalizedAnalysis.overallScore ?? normalizedAnalysis.overallFit ?? app.match_score,
+            recommendation: normalizedAnalysis.recommendation ?? app.recommendation,
+            screening_status: normalizedAnalysis.screeningStatus ?? app.screening_status,
+            status: normalizedAnalysis.status ?? app.status
+          }
+        : app
+      ));
+      await loadData();
     } catch (err) {
       console.error(err);
       const errorMessage = err.response?.data?.message || err.message || "AI resume screening failed. Verify that PDF is text-readable and database is running.";
@@ -218,9 +236,12 @@ function AICandidates() {
     return <Badge variant="danger">{score}% Match</Badge>;
   };
 
-  // History list: applications with non-null match scores
+  const getOverallFitValue = (app) => app.overallFit ?? app.match_score ?? app.overallScore ?? app.overall_fit ?? null;
+  const getRecommendationValue = (app) => app.recommendation || app.screeningRecommendation || "Under Review";
+
+  // History list: applications with persisted AI screening results
   const recentAnalyses = applications
-    .filter(app => app.match_score !== null)
+    .filter(app => getOverallFitValue(app) !== null || app.recommendation || app.screening_status === "Completed")
     .sort((a, b) => b.id - a.id);
 
   const selectedJob = jobs.find(j => Number(j.jd_id) === Number(selectedJobId));
@@ -620,16 +641,19 @@ function AICandidates() {
                       </tr>
                     </thead>
                     <tbody>
-                      {recentAnalyses.slice(0, 5).map((app) => (
+                      {recentAnalyses.slice(0, 5).map((app) => {
+                        const overallFit = getOverallFitValue(app);
+                        const recommendation = getRecommendationValue(app);
+                        return (
                         <tr key={app.id}>
                           <td>
                             <div className="fw-bold text-white">{app.candidate_name}</div>
                             <small className="text-muted">{app.email}</small>
                           </td>
                           <td>{app.job_title}</td>
-                          <td>{getScoreBadge(app.match_score)}</td>
+                          <td>{getScoreBadge(overallFit)}</td>
                           <td>
-                            <Badge variant={getScoreBadgeClass(app.match_score)}>{app.recommendation || "Under Review"}</Badge>
+                            <Badge variant={getScoreBadgeClass(overallFit)}>{recommendation}</Badge>
                           </td>
                           <td>{new Date(app.created_at).toLocaleDateString()}</td>
                           <td className="text-end">
@@ -646,7 +670,8 @@ function AICandidates() {
                             </Button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
