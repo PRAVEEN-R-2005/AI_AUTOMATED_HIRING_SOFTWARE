@@ -8,6 +8,7 @@ import Button from "../components/ui/Button";
 import Select from "../components/ui/Select";
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/feedback/ErrorState";
+import Modal from "../components/ui/Modal";
 import {
   FaChartBar,
   FaSearch,

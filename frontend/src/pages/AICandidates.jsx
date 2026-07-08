@@ -177,6 +177,13 @@ function AICandidates() {
     return "danger";
   };
 
+  const getScoreBadge = (score) => {
+    if (!score && score !== 0) return <Badge variant="secondary">N/A</Badge>;
+    if (score >= 80) return <Badge variant="success">{score}% Match</Badge>;
+    if (score >= 60) return <Badge variant="info">{score}% Match</Badge>;
+    return <Badge variant="danger">{score}% Match</Badge>;
+  };
+
   // History list: applications with non-null match scores
   const recentAnalyses = applications
     .filter(app => app.match_score !== null)

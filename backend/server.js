@@ -88,17 +88,9 @@ const jobRoutes = require(
 
 );
 
-const resumeRoutes = require(
 
-    "./routes/resumeRoutes"
 
-);
 
-const candidateRoutes = require(
-
-    "./routes/candidateRoutes"
-
-);
 
 const interviewRoutes = require(
 
@@ -118,11 +110,7 @@ const hrRoutes = require(
 
 );
 
-const aiCandidateRoutes = require(
 
-    "./routes/aiCandidateRoutes"
-
-);
 
 const applicationRoutes = require(
 
@@ -145,6 +133,8 @@ const jobDescriptionRoutes = require(
 const notificationRoutes = require("./routes/notificationRoutes");
 const communicationRoutes = require("./routes/communicationRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
+const teamRoutes = require("./routes/teamRoutes");
+const commentRoutes = require("./routes/commentRoutes");
 
 
 // ====================
@@ -167,21 +157,9 @@ app.use(
 
 );
 
-app.use(
 
-    "/api/resumes",
 
-    resumeRoutes
 
-);
-
-app.use(
-
-    "/api/candidates",
-
-    candidateRoutes
-
-);
 
 app.use(
 
@@ -207,13 +185,7 @@ app.use(
 
 );
 
-app.use(
 
-    "/api/ai-candidates",
-
-    aiCandidateRoutes
-
-);
 
 app.use(
 
@@ -248,6 +220,8 @@ app.use(
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/communications", communicationRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/team", teamRoutes);
+app.use("/api/comments", commentRoutes);
 
 
 // ====================
@@ -270,6 +244,19 @@ app.get(
 
 );
 
+
+// ====================
+// Global Error Handler
+// ====================
+app.use((err, req, res, next) => {
+    console.error("Unhandled Server Error:", err);
+    res.status(err.status || 500).json({
+        success: false,
+        message: process.env.NODE_ENV === "production"
+            ? "An unexpected error occurred on the server. Please contact support."
+            : err.message
+    });
+});
 
 // ====================
 // Start Server

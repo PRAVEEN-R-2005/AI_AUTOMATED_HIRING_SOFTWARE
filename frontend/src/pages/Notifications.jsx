@@ -11,10 +11,6 @@ function Notifications() {
     const [filterType, setFilterType] = useState("all"); // all, unread, read
     const [categoryFilter, setCategoryFilter] = useState("");
 
-    useEffect(() => {
-        fetchNotifications();
-    }, []);
-
     const fetchNotifications = async () => {
         try {
             const res = await api.get("/api/notifications");
@@ -32,6 +28,10 @@ function Notifications() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
 
     const markAsRead = async (id) => {
         try { await api.put(`/api/notifications/read/${id}`); } catch { /* OK */ }

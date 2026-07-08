@@ -1,7 +1,7 @@
 const express = require("express");
-
 const router = express.Router();
-const { verifyToken, requireRole } = require("../middleware/authMiddleware");
+const { verifyToken, requireRole, requirePermission } = require("../middleware/authMiddleware");
+const { PERMISSIONS } = require("../utils/permissions");
 
 const {
     createJD,
@@ -13,13 +13,19 @@ const {
     getOpenJD
 } = require("../controllers/jobDescriptionController");
 
+const {
+    getJobTeam,
+    assignTeamMember,
+    unassignTeamMember
+} = require("../controllers/jobAssignmentController");
+
 // ======================================
 // CREATE JD
 // ======================================
 router.post(
     "/",
     verifyToken,
-    requireRole(["Admin", "HR"]),
+    requirePermission(PERMISSIONS.JOB_CREATE),
     createJD
 );
 
@@ -29,7 +35,7 @@ router.post(
 router.get(
     "/",
     verifyToken,
-    requireRole(["Admin", "HR"]),
+    requirePermission(PERMISSIONS.JOB_VIEW),
     getAllJD
 );
 
@@ -39,7 +45,7 @@ router.get(
 router.put(
     "/:id",
     verifyToken,
-    requireRole(["Admin", "HR"]),
+    requirePermission(PERMISSIONS.JOB_UPDATE),
     updateJD
 );
 
@@ -49,7 +55,7 @@ router.put(
 router.delete(
     "/:id",
     verifyToken,
-    requireRole(["Admin", "HR"]),
+    requirePermission(PERMISSIONS.JOB_DELETE),
     deleteJD
 );
 
@@ -59,7 +65,7 @@ router.delete(
 router.put(
     "/publish/:id",
     verifyToken,
-    requireRole(["Admin", "HR"]),
+    requirePermission(PERMISSIONS.JOB_PUBLISH),
     publishJD
 );
 
@@ -69,7 +75,7 @@ router.put(
 router.put(
     "/close/:id",
     verifyToken,
-    requireRole(["Admin", "HR"]),
+    requirePermission(PERMISSIONS.JOB_PUBLISH),
     closeJD
 );
 
@@ -81,6 +87,28 @@ router.get(
     verifyToken,
     requireRole(["Candidate", "HR", "Admin"]),
     getOpenJD
+);
+
+// ======================================
+// HIRING TEAM ASSIGNMENTS
+// ======================================
+router.get(
+    "/:id/team",
+    verifyToken,
+    requirePermission(PERMISSIONS.JOB_VIEW),
+    getJobTeam
+);
+router.post(
+    "/:id/team",
+    verifyToken,
+    requirePermission(PERMISSIONS.JOB_ASSIGN_TEAM),
+    assignTeamMember
+);
+router.delete(
+    "/:id/team/:userId",
+    verifyToken,
+    requirePermission(PERMISSIONS.JOB_ASSIGN_TEAM),
+    unassignTeamMember
 );
 
 module.exports = router;

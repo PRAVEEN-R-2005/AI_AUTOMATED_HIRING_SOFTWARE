@@ -2,8 +2,60 @@ const Interview = require("../models/interviewModel");
 const db = require("../config/db");
 const { notifyRecruiters, createNotification } = require("../utils/notifier");
 
+// Helper to verify interview access (prevent cross-organization IDOR)
+const verifyInterviewAccess = (ivId, req, callback) => {
+    const { role, organization_id, email } = req.user;
+
+    const sql = "SELECT * FROM interviews WHERE id = ?";
+    db.query(sql, [ivId], (err, rows) => {
+        if (err || !rows || rows.length === 0) {
+            return callback(new Error("Interview not found"));
+        }
+
+        const iv = rows[0];
+
+        // Organization check
+        if (iv.organization_id && iv.organization_id !== organization_id) {
+            return callback(new Error("Access Denied: Cross-organization access blocked"));
+        }
+
+        if (role === "Admin" || role === "HR" || role === "Recruiter") {
+            return callback(null, iv);
+        }
+
+        if (role === "Interviewer") {
+            // Check if user is the assigned interviewer (matching email or name)
+            const interviewerEmail = email.toLowerCase();
+            const assignedEmail = iv.interviewer ? iv.interviewer.toLowerCase() : "";
+            
+            if (assignedEmail !== interviewerEmail) {
+                return callback(new Error("Access Denied: You are not the assigned interviewer for this session"));
+            }
+            return callback(null, iv);
+        }
+
+        if (role === "Hiring Manager") {
+            // Check if assigned to the candidate's job
+            const checkAssign = `
+                SELECT ja.id FROM job_assignments ja
+                INNER JOIN applications a ON ja.job_id = a.job_id
+                WHERE a.id = ? AND ja.user_id = ? AND ja.assigned_role = 'Hiring Manager'
+            `;
+            db.query(checkAssign, [iv.candidate_id, req.user.id], (checkErr, assigns) => {
+                if (checkErr || !assigns || assigns.length === 0) {
+                    return callback(new Error("Access Denied: You are not assigned to this job requisition"));
+                }
+                callback(null, iv);
+            });
+        } else {
+            callback(new Error("Access Denied: Invalid role permissions"));
+        }
+    });
+};
+
 // CREATE INTERVIEW WITH CONFLICT CHECKING
 const createInterview = (req, res) => {
+    const orgId = req.user.organization_id;
     const {
         candidate_id,
         candidate_name,
@@ -13,7 +65,7 @@ const createInterview = (req, res) => {
         interview_date,
         interview_time,
         mode,
-        interviewer,
+        interviewer, // interviewer email or identifier
         round,
         duration,
         meeting_link
@@ -23,15 +75,16 @@ const createInterview = (req, res) => {
         return res.status(400).json({ message: "Interviewer, date, and time are required." });
     }
 
-    // 1. Conflict detection for the assigned interviewer
+    // 1. Conflict detection for the assigned interviewer within the organization
     const conflictSql = `
         SELECT * FROM interviews 
         WHERE interviewer = ? 
           AND interview_date = ? 
           AND interview_time = ? 
           AND status != 'Cancelled'
+          AND organization_id = ?
     `;
-    db.query(conflictSql, [interviewer, interview_date, interview_time], (err, conflicts) => {
+    db.query(conflictSql, [interviewer, interview_date, interview_time, orgId], (err, conflicts) => {
         if (err) {
             console.error("Conflict check failed:", err);
             return res.status(500).json({ message: "Conflict validation check error" });
@@ -44,30 +97,34 @@ const createInterview = (req, res) => {
         }
 
         // 2. Create interview record
-        Interview.createInterview(
-            candidate_id,
-            candidate_name,
-            email,
-            phone,
-            ai_score,
-            interview_date,
-            interview_time,
-            mode,
-            interviewer,
-            round,
-            duration,
-            meeting_link,
+        const insertSql = `
+            INSERT INTO interviews (
+                candidate_id, candidate_name, email, phone, ai_score, 
+                interview_date, interview_time, mode, interviewer, 
+                round, duration, meeting_link, status, organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Scheduled', ?)
+        `;
+
+        db.query(
+            insertSql,
+            [
+                candidate_id, candidate_name, email, phone || "N/A", ai_score || 0,
+                interview_date, interview_time, mode, interviewer,
+                round || "Technical Interview", duration || 30, meeting_link || null, orgId
+            ],
             (err, result) => {
                 if (err) {
                     console.error("Failed to create interview record:", err);
                     return res.status(500).json({ message: "Interview Creation Failed" });
                 }
 
+                const interviewId = result.insertId;
+
                 // 3. Log scheduling activity
                 const detailText = `Scheduled ${round || 'Technical Interview'} with ${interviewer} on ${interview_date} at ${interview_time}`;
                 db.query(
-                    "INSERT INTO activities (application_id, candidate_name, action, details) VALUES (?, ?, 'Interview Scheduled', ?)",
-                    [candidate_id, candidate_name, detailText],
+                    "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Interview Scheduled', ?, ?)",
+                    [candidate_id, candidate_name, detailText, orgId],
                     (actErr) => {
                         if (actErr) console.error("Failed to log interview schedule activity:", actErr);
                     }
@@ -75,15 +132,15 @@ const createInterview = (req, res) => {
 
                 // 4. Progress candidate status to Interview stage in applications
                 db.query(
-                    "UPDATE applications SET status = 'Interview' WHERE id = ?",
-                    [candidate_id],
+                    "UPDATE applications SET status = 'Interview' WHERE id = ? AND organization_id = ?",
+                    [candidate_id, orgId],
                     (statusErr) => {
                         if (statusErr) {
                             console.error("Failed to progress status to Interview stage:", statusErr);
                         } else {
                             db.query(
-                                "INSERT INTO activities (application_id, candidate_name, action, details) VALUES (?, ?, 'Stage Transition', 'Moved to Interview stage (Interview scheduled)')",
-                                [candidate_id, candidate_name],
+                                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Stage Transition', 'Moved to Interview stage (Interview scheduled)', ?)",
+                                [candidate_id, candidate_name, orgId],
                                 (transErr) => {
                                     if (transErr) console.error("Failed to log transition activity:", transErr);
                                 }
@@ -109,7 +166,7 @@ const createInterview = (req, res) => {
 
                 res.status(201).json({
                     message: "Interview Scheduled Successfully",
-                    interviewId: result.insertId
+                    interviewId
                 });
             }
         );
@@ -118,11 +175,35 @@ const createInterview = (req, res) => {
 
 // GET ALL INTERVIEWS
 const getAllInterviews = (req, res) => {
-    Interview.getAllInterviews((err, results) => {
+    const { role, organization_id, email, id: userId } = req.user;
+
+    let sql = "";
+    const params = [organization_id];
+
+    if (role === "Admin" || role === "HR" || role === "Recruiter") {
+        sql = "SELECT * FROM interviews WHERE organization_id = ? ORDER BY id DESC";
+    } else if (role === "Hiring Manager") {
+        sql = `
+            SELECT iv.* FROM interviews iv
+            INNER JOIN applications a ON iv.candidate_id = a.id
+            INNER JOIN job_assignments ja ON a.job_id = ja.job_id
+            WHERE iv.organization_id = ? AND ja.user_id = ? AND ja.assigned_role = 'Hiring Manager'
+            ORDER BY iv.id DESC
+        `;
+        params.push(userId);
+    } else if (role === "Interviewer") {
+        sql = "SELECT * FROM interviews WHERE organization_id = ? AND LOWER(interviewer) = LOWER(?) ORDER BY id DESC";
+        params.push(email);
+    } else {
+        return res.status(403).json({ message: "Access Denied: Invalid role permissions" });
+    }
+
+    db.query(sql, params, (err, results) => {
         if (err) {
+            console.error("Fetch Interviews Error:", err);
             return res.status(500).json({ message: "Database Error" });
         }
-        res.status(200).json(results);
+        res.status(200).json(results || []);
     });
 };
 
@@ -131,11 +212,8 @@ const updateInterviewStatus = (req, res) => {
     const id = req.params.id;
     const { status } = req.body;
 
-    db.query("SELECT * FROM interviews WHERE id = ?", [id], (findErr, rows) => {
-        if (findErr || !rows || rows.length === 0) {
-            return res.status(404).json({ message: "Interview not found" });
-        }
-        const iv = rows[0];
+    verifyInterviewAccess(id, req, (authErr, iv) => {
+        if (authErr) return res.status(403).json({ message: authErr.message });
 
         Interview.updateInterviewStatus(id, status, (err, result) => {
             if (err) {
@@ -145,8 +223,8 @@ const updateInterviewStatus = (req, res) => {
             // Log update activity
             const detailText = `Interview status set to ${status}`;
             db.query(
-                "INSERT INTO activities (application_id, candidate_name, action, details) VALUES (?, ?, 'Interview Updated', ?)",
-                [iv.candidate_id, iv.candidate_name, detailText],
+                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Interview Updated', ?, ?)",
+                [iv.candidate_id, iv.candidate_name, detailText, req.user.organization_id],
                 (actErr) => {
                     if (actErr) console.error("Failed to insert update activity:", actErr);
                 }
@@ -184,11 +262,13 @@ const submitFeedback = (req, res) => {
         return res.status(400).json({ message: "Evaluation comments and rating are required." });
     }
 
-    db.query("SELECT * FROM interviews WHERE id = ?", [id], (findErr, rows) => {
-        if (findErr || !rows || rows.length === 0) {
-            return res.status(404).json({ message: "Interview record not found" });
+    verifyInterviewAccess(id, req, (authErr, iv) => {
+        if (authErr) return res.status(403).json({ message: authErr.message });
+
+        // Enforce that only the assigned interviewer can submit feedback (unless Admin)
+        if (req.user.role === "Interviewer" && iv.interviewer.toLowerCase() !== req.user.email.toLowerCase()) {
+            return res.status(403).json({ message: "Access Denied: You cannot submit feedback for an interview assigned to another member" });
         }
-        const iv = rows[0];
 
         Interview.submitFeedback(id, feedback, rating, (err, result) => {
             if (err) {
@@ -199,8 +279,8 @@ const submitFeedback = (req, res) => {
             // Log feedback activity
             const detailText = `Submitted evaluation feedback for ${iv.round} (Rating: ${rating}/5)`;
             db.query(
-                "INSERT INTO activities (application_id, candidate_name, action, details) VALUES (?, ?, 'Interview Evaluation', ?)",
-                [iv.candidate_id, iv.candidate_name, detailText],
+                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Interview Evaluation', ?, ?)",
+                [iv.candidate_id, iv.candidate_name, detailText, req.user.organization_id],
                 (actErr) => {
                     if (actErr) console.error("Failed to insert feedback activity:", actErr);
                 }
@@ -232,12 +312,26 @@ const getInterviewsByEmail = (req, res) => {
         });
     }
 
-    Interview.getInterviewsByEmail(email, (err, results) => {
-        if (err) {
-            return res.status(500).json({ message: "Database Error" });
-        }
-        res.status(200).json(results);
-    });
+    if (req.user.role === "Candidate") {
+        Interview.getInterviewsByEmail(email, (err, results) => {
+            if (err) {
+                return res.status(500).json({ message: "Database Error" });
+            }
+            res.status(200).json(results || []);
+        });
+    } else {
+        const orgId = req.user.organization_id;
+        db.query(
+            "SELECT * FROM interviews WHERE email=? AND organization_id=? ORDER BY interview_date ASC",
+            [email, orgId],
+            (err, results) => {
+                if (err) {
+                    return res.status(500).json({ message: "Database Error" });
+                }
+                res.status(200).json(results || []);
+            }
+        );
+    }
 };
 
 module.exports = {

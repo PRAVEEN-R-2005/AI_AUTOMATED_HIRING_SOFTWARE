@@ -32,6 +32,8 @@ const AvailableJobs = lazy(() => import("./pages/AvailableJobs"));
 const ApplyJob = lazy(() => import("./pages/ApplyJob"));
 const MyApplications = lazy(() => import("./pages/MyApplications"));
 const InterviewStatus = lazy(() => import("./pages/InterviewStatus"));
+const Team = lazy(() => import("./pages/Team"));
+const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 
 // ================= PROTECTED ROUTES =================
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -75,48 +77,55 @@ function App() {
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
 
+                        {/* ================= UNAUTHORIZED ROUTE ================= */}
+                        <Route path="/unauthorized" element={<AccessDenied />} />
+
                         {/* ================= COMMON DASHBOARD ================= */}
                         <Route
                             path="/dashboard"
                             element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
                         />
 
-                        {/* ================= ADMIN + HR ================= */}
+                        {/* ================= RECRUITMENT WORKSPACE ================= */}
                         <Route
                             path="/jobs"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><Jobs /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><Jobs /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/applications"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><Applications /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><Applications /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/candidates"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><Candidates /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><Candidates /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/manage-jd"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><Jobs /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><Jobs /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/ai-candidates"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><AICandidates /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><AICandidates /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/interviews"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><Interviews /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager", "Interviewer"]}><Interviews /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/top-candidates"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><TopCandidates /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><TopCandidates /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/analytics"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><Analytics /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><Analytics /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/notifications"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR"]}><Notifications /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager", "Interviewer"]}><Notifications /></RoleProtectedRoute>}
+                        />
+                        <Route
+                            path="/team"
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><Team /></RoleProtectedRoute>}
                         />
 
                         {/* ================= SETTINGS (ALL ROLES) ================= */}

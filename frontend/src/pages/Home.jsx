@@ -279,6 +279,46 @@ function Home() {
         </div>
       </section>
 
+      {/* DEMO SANDBOX CREDENTIALS ACCESS */}
+      <section className="py-4" style={{ background: "rgba(37, 99, 235, 0.05)", borderBottom: "1px solid rgba(37, 99, 235, 0.1)", borderTop: "1px solid rgba(37, 99, 235, 0.1)" }}>
+        <div className="container text-white">
+          <div className="row justify-content-center align-items-center">
+            <div className="col-lg-10">
+              <div className="p-4 rounded d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 bg-dark bg-opacity-30 border border-primary border-opacity-20">
+                <div className="text-start">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <Badge variant="primary">Recruiter Demo Sandbox</Badge>
+                    <span className="text-muted-custom" style={{ fontSize: "0.8rem" }}>Instant Access Mode</span>
+                  </div>
+                  <h4 className="fw-bold mb-1 text-white">Evaluate Smart ATS Features Instantly</h4>
+                  <p className="mb-0 text-muted-custom" style={{ fontSize: "0.88rem" }}>
+                    The database is pre-seeded with realistic candidate applications, scores, activities, and interview scorecards.
+                  </p>
+                </div>
+                
+                <div className="d-flex flex-wrap gap-3 align-items-center justify-content-center">
+                  <div className="text-start p-3 rounded" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", minWidth: "210px" }}>
+                    <small className="text-muted d-block" style={{ fontSize: "0.75rem" }}>Recruiter / HR Role</small>
+                    <strong className="text-white d-block" style={{ fontSize: "0.9rem" }}>Email: hr@gmail.com</strong>
+                    <code className="text-primary" style={{ fontSize: "0.85rem" }}>Password: 123456</code>
+                  </div>
+                  
+                  <div className="text-start p-3 rounded" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", minWidth: "210px" }}>
+                    <small className="text-muted d-block" style={{ fontSize: "0.75rem" }}>Organization Admin Role</small>
+                    <strong className="text-white d-block" style={{ fontSize: "0.9rem" }}>Email: admin@gmail.com</strong>
+                    <code className="text-primary" style={{ fontSize: "0.85rem" }}>Password: admin123</code>
+                  </div>
+
+                  <Button variant="primary" onClick={() => navigate("/login")}>
+                    Log In Now
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 3. PLATFORM VALUE SECTION */}
       <section className="py-5" style={{ background: "#0b0f19", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
         <div className="container py-4">

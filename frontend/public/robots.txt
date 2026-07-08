@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /$
+Allow: /available-jobs
+Allow: /apply-job
+Allow: /favicon.svg
+Allow: /assets/
+Disallow: /dashboard
+Disallow: /applications
+Disallow: /candidates
+Disallow: /manage-jd
+Disallow: /ai-candidates
+Disallow: /interviews
+Disallow: /top-candidates
+Disallow: /analytics
+Disallow: /notifications
+Disallow: /team
+Disallow: /settings
+Disallow: /unauthorized
+
+Sitemap: https://ai-hiring-ats.example.com/sitemap.xml

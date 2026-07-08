@@ -11,6 +11,7 @@ import Select from "../components/ui/Select";
 import Modal from "../components/ui/Modal";
 import Skeleton from "../components/ui/Skeleton";
 import EmptyState from "../components/feedback/EmptyState";
+import HiringTeamManager from "../components/ui/HiringTeamManager";
 import ErrorState from "../components/feedback/ErrorState";
 import {
   FaBriefcase,
@@ -70,6 +71,7 @@ function Jobs() {
   // Delete Confirm Modal state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState(null);
+  const [hiringTeamJob, setHiringTeamJob] = useState(null);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -470,6 +472,11 @@ function Jobs() {
                   </CardContent>
 
                   <div className="card-custom-footer p-3 bg-dark bg-opacity-25 border-top d-flex gap-2 justify-content-end" style={{ borderColor: "var(--border)" }}>
+                    {recruiterRole !== "Hiring Manager" && (
+                      <Button variant="ghost" size="sm" title="Hiring Team" onClick={() => setHiringTeamJob(job)}>
+                        <FaUsers />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" title="Duplicate Requisition" onClick={() => handleDuplicateJob(job)}>
                       <FaCopy />
                     </Button>
@@ -531,6 +538,11 @@ function Jobs() {
                         <td>{getStatusBadge(job.status)}</td>
                         <td className="text-end">
                           <div className="d-inline-flex gap-1">
+                            {recruiterRole !== "Hiring Manager" && (
+                              <Button variant="ghost" size="sm" title="Hiring Team" onClick={() => setHiringTeamJob(job)}>
+                                <FaUsers />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="sm" title="Duplicate" onClick={() => handleDuplicateJob(job)}>
                               <FaCopy />
                             </Button>
@@ -799,6 +811,18 @@ function Jobs() {
             <p className="text-muted mb-0 text-start" style={{ fontSize: "0.95rem" }}>
               Are you sure you want to permanently delete **{jobToDelete?.title}**? All candidate applications associated with this posting will remain intact but the posting itself will be deleted.
             </p>
+          </Modal>
+        )}
+
+        {/* 9. HIRING TEAM ASSIGNMENTS MODAL */}
+        {hiringTeamJob && (
+          <Modal
+            isOpen={!!hiringTeamJob}
+            onClose={() => setHiringTeamJob(null)}
+            title="Manage Hiring Team"
+            size="lg"
+          >
+            <HiringTeamManager jobId={hiringTeamJob.jd_id} jobTitle={hiringTeamJob.title} />
           </Modal>
         )}
 

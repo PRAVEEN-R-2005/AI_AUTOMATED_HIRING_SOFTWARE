@@ -32,6 +32,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
   const navItems = {
     Admin: [
       { path: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
+      { path: "/team", label: "Team", icon: <FaUsers /> },
       { path: "/jobs", label: "Jobs", icon: <FaBriefcase /> },
       { path: "/applications", label: "Applications", icon: <FaFileAlt /> },
       { path: "/candidates", label: "Candidates", icon: <FaUsers /> },
@@ -44,6 +45,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
     ],
     HR: [
       { path: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
+      { path: "/team", label: "Team", icon: <FaUsers /> },
       { path: "/jobs", label: "Jobs", icon: <FaBriefcase /> },
       { path: "/applications", label: "Applications", icon: <FaFileAlt /> },
       { path: "/candidates", label: "Candidates", icon: <FaUsers /> },
@@ -54,12 +56,41 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
       { path: "/notifications", label: "Notifications", icon: <FaBell /> },
       { path: "/settings", label: "Settings", icon: <FaCog /> },
     ],
+    Recruiter: [
+      { path: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
+      { path: "/team", label: "Team", icon: <FaUsers /> },
+      { path: "/jobs", label: "Jobs", icon: <FaBriefcase /> },
+      { path: "/applications", label: "Applications", icon: <FaFileAlt /> },
+      { path: "/candidates", label: "Candidates", icon: <FaUsers /> },
+      { path: "/ai-candidates", label: "AI Candidates", icon: <FaRobot /> },
+      { path: "/interviews", label: "Interviews", icon: <FaCalendarAlt /> },
+      { path: "/top-candidates", label: "Top Candidates", icon: <FaTrophy /> },
+      { path: "/analytics", label: "Analytics", icon: <FaChartBar /> },
+      { path: "/notifications", label: "Notifications", icon: <FaBell /> },
+      { path: "/settings", label: "Settings", icon: <FaCog /> },
+    ],
+    "Hiring Manager": [
+      { path: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
+      { path: "/jobs", label: "Jobs", icon: <FaBriefcase /> },
+      { path: "/applications", label: "Applications", icon: <FaFileAlt /> },
+      { path: "/candidates", label: "Candidates", icon: <FaUsers /> },
+      { path: "/interviews", label: "Interviews", icon: <FaCalendarAlt /> },
+      { path: "/notifications", label: "Notifications", icon: <FaBell /> },
+      { path: "/settings", label: "Settings", icon: <FaCog /> },
+    ],
+    Interviewer: [
+      { path: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
+      { path: "/interviews", label: "Interviews", icon: <FaCalendarAlt /> },
+      { path: "/notifications", label: "Notifications", icon: <FaBell /> },
+      { path: "/settings", label: "Settings", icon: <FaCog /> },
+    ],
     Candidate: [
       { path: "/student-dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
       { path: "/available-jobs", label: "Available Jobs", icon: <FaBriefcase /> },
       { path: "/apply-job", label: "Apply Job", icon: <FaUserGraduate /> },
       { path: "/my-applications", label: "My Applications", icon: <FaFileAlt /> },
       { path: "/interview-status", label: "Interview Status", icon: <FaCalendarAlt /> },
+      { path: "/settings", label: "Settings", icon: <FaCog /> },
     ],
   };
 

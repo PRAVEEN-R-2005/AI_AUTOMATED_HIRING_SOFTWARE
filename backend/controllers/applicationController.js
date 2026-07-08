@@ -1,108 +1,165 @@
-
 const Application = require("../models/applicationModel");
 const db = require("../config/db");
 const { notifyRecruiters } = require("../utils/notifier");
+const { logAuditEvent } = require("../utils/auditLogger");
 
+// Helper to verify application access for safety / IDOR prevention
+const verifyAppAccess = (appId, req, callback) => {
+    const { role, organization_id, email, id: userId } = req.user;
+
+    // Fetch the application and its job details
+    const sql = `
+        SELECT a.organization_id, a.job_id, a.email as candidate_email, a.status 
+        FROM applications a 
+        WHERE a.id = ?
+    `;
+    db.query(sql, [appId], (err, rows) => {
+        if (err || !rows || rows.length === 0) {
+            return callback(new Error("Application not found"));
+        }
+
+        const app = rows[0];
+
+        // Organization isolation check
+        if (app.organization_id && app.organization_id !== organization_id) {
+            return callback(new Error("Access Denied: Cross-organization access blocked"));
+        }
+
+        if (role === "Admin" || role === "HR" || role === "Recruiter") {
+            return callback(null, app);
+        }
+
+        if (role === "Hiring Manager") {
+            const checkAssign = "SELECT id FROM job_assignments WHERE job_id = ? AND user_id = ? AND assigned_role = 'Hiring Manager'";
+            db.query(checkAssign, [app.job_id, userId], (assignErr, assigns) => {
+                if (assignErr || !assigns || assigns.length === 0) {
+                    return callback(new Error("Access Denied: You are not assigned to this job"));
+                }
+                callback(null, app);
+            });
+        } else if (role === "Interviewer") {
+            const checkInterview = "SELECT id FROM interviews WHERE candidate_id = ? AND interviewer = ? AND organization_id = ?";
+            db.query(checkInterview, [appId, email, organization_id], (ivErr, ivs) => {
+                if (ivErr || !ivs || ivs.length === 0) {
+                    return callback(new Error("Access Denied: You do not have scheduled interviews with this candidate"));
+                }
+                callback(null, app);
+            });
+        } else if (role === "Candidate") {
+            if (app.candidate_email.toLowerCase() !== email.toLowerCase()) {
+                return callback(new Error("Access Denied: You do not own this application"));
+            }
+            callback(null, app);
+        } else {
+            callback(new Error("Access Denied: Invalid role permissions"));
+        }
+    });
+};
 
 // ====================================
 // CREATE APPLICATION
 // ====================================
-
 const createApplication = (req, res) => {
+    const { candidate_name, email, phone, job_id } = req.body;
+    const resume_file = req.file ? req.file.filename : null;
 
-    const {
-
-        candidate_name,
-        email,
-        phone,
-        job_id
-
+    if (!job_id) {
+        return res.status(400).json({ message: "Job Requisition ID is required" });
     }
 
-    = req.body;
-
-
-    const resume_file = req.file.filename;
-
-
-    Application.createApplication(
-
-        candidate_name,
-        email,
-        phone,
-        job_id,
-        resume_file,
-
-        (err, result) => {
-
-            if (err) {
-
-                return res.status(500).json({
-
-                    message:
-
-                    "Database Error"
-
-                });
-
-            }
-
-            res.status(201).json({
-
-                message:
-
-                "Application Submitted Successfully",
-                applicationId:
-                result.insertId
-
-            });
-
+    // Look up organization ID of the job requisition being applied to
+    const jobSql = "SELECT organization_id FROM job_descriptions WHERE jd_id = ?";
+    db.query(jobSql, [job_id], (jobErr, jobs) => {
+        if (jobErr || !jobs || jobs.length === 0) {
+            return res.status(404).json({ message: "Job Requisition not found" });
         }
 
-    );
+        const orgId = jobs[0].organization_id || 1;
 
+        const sql = `
+            INSERT INTO applications (candidate_name, email, phone, job_id, resume_file, status, organization_id)
+            VALUES (?, ?, ?, ?, ?, 'Pending', ?)
+        `;
+
+        db.query(sql, [candidate_name, email, phone, job_id, resume_file, orgId], (err, result) => {
+            if (err) {
+                console.error("Create Application Error:", err);
+                return res.status(500).json({ message: "Database Error" });
+            }
+
+            // Log audit event
+            logAuditEvent({
+                organizationId: orgId,
+                actorName: candidate_name,
+                actorEmail: email,
+                eventCategory: "APPLICATION",
+                action: "APPLICATION_STATUS_CHANGED",
+                resourceType: "APPLICATION",
+                resourceId: result.insertId,
+                metadata: { status: "Pending", job_id }
+            });
+
+            res.status(201).json({
+                message: "Application Submitted Successfully",
+                applicationId: result.insertId
+            });
+        });
+    });
 };
-
 
 // ====================================
 // GET ALL APPLICATIONS
 // ====================================
-
 const getApplications = (req, res) => {
+    const { role, organization_id, id: userId, email } = req.user;
 
-    Application.getApplications(
+    let sql = "";
+    const params = [organization_id];
 
-        (err, results) => {
+    if (role === "Admin" || role === "HR" || role === "Recruiter") {
+        sql = `
+            SELECT a.*, j.title AS job_title 
+            FROM applications a
+            LEFT JOIN job_descriptions j ON a.job_id = j.jd_id
+            WHERE a.organization_id = ?
+            ORDER BY a.id DESC
+        `;
+    } else if (role === "Hiring Manager") {
+        sql = `
+            SELECT a.*, j.title AS job_title 
+            FROM applications a
+            LEFT JOIN job_descriptions j ON a.job_id = j.jd_id
+            INNER JOIN job_assignments ja ON a.job_id = ja.job_id
+            WHERE a.organization_id = ? AND ja.user_id = ? AND ja.assigned_role = 'Hiring Manager'
+            ORDER BY a.id DESC
+        `;
+        params.push(userId);
+    } else if (role === "Interviewer") {
+        sql = `
+            SELECT a.*, j.title AS job_title 
+            FROM applications a
+            LEFT JOIN job_descriptions j ON a.job_id = j.jd_id
+            INNER JOIN interviews iv ON a.id = iv.candidate_id
+            WHERE a.organization_id = ? AND iv.interviewer = ?
+            ORDER BY a.id DESC
+        `;
+        params.push(email);
+    } else {
+        return res.status(403).json({ message: "Access Denied: Invalid role permissions" });
+    }
 
-            if (err) {
-
-                return res.status(500).json({
-
-                    message:
-
-                    "Database Error"
-
-                });
-
-            }
-
-            res.status(200).json(
-
-                results
-
-            );
-
+    db.query(sql, params, (err, results) => {
+        if (err) {
+            console.error("Fetch Applications Error:", err);
+            return res.status(500).json({ message: "Database Error" });
         }
-
-    );
-
+        res.status(200).json(results || []);
+    });
 };
-
 
 // ====================================
 // GET APPLICATIONS BY EMAIL
 // ====================================
-
 const getApplicationByEmail = (req, res) => {
     const email = req.params.email;
 
@@ -114,45 +171,31 @@ const getApplicationByEmail = (req, res) => {
         });
     }
 
-    Application.getApplicationByEmail(
+    const sql = `
+        SELECT a.*, j.title AS job_title 
+        FROM applications a
+        LEFT JOIN job_descriptions j ON a.job_id = j.jd_id
+        WHERE a.email = ?
+        ORDER BY a.id DESC
+    `;
 
-        email,
-
-        (err, results) => {
-
-            if (err) {
-
-                return res.status(500).json({
-
-                    message:
-
-                    "Database Error"
-
-                });
-
-            }
-
-            // Mask sensitive internal properties (recruiter notes, rejection reason) for candidates
-            if (req.user.role === "Candidate") {
-                const masked = results.map(app => {
-                    const { recruiter_notes, rejection_reason, ...rest } = app;
-                    return rest;
-                });
-                return res.status(200).json(masked);
-            }
-
-            res.status(200).json(
-
-                results
-
-            );
-
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            return res.status(500).json({ message: "Database Error" });
         }
 
-    );
+        // Mask sensitive internal properties (recruiter notes, rejection reason) for candidates
+        if (req.user.role === "Candidate") {
+            const masked = results.map(app => {
+                const { recruiter_notes, rejection_reason, ...rest } = app;
+                return rest;
+            });
+            return res.status(200).json(masked);
+        }
 
+        res.status(200).json(results || []);
+    });
 };
-
 
 // ====================================
 // UPDATE STATUS
@@ -166,51 +209,48 @@ const updateApplicationStatus = (req, res) => {
         return res.status(400).json({ message: "Invalid status stage value." });
     }
 
-    db.query(
-        "SELECT candidate_name, status FROM applications WHERE id = ?",
-        [id],
-        (findErr, rows) => {
-            if (findErr || !rows || rows.length === 0) {
-                return res.status(404).json({ message: "Application not found" });
+    verifyAppAccess(id, req, (authErr, app) => {
+        if (authErr) return res.status(403).json({ message: authErr.message });
+
+        const oldStatus = app.status;
+
+        Application.updateApplicationStatus(id, status, (err, result) => {
+            if (err) {
+                return res.status(500).json({ message: "Database Error" });
             }
 
-            const app = rows[0];
-            const oldStatus = app.status;
-
-            Application.updateApplicationStatus(
-                id,
-                status,
-                (err, result) => {
-                    if (err) {
-                        return res.status(500).json({ message: "Database Error" });
-                    }
-
-                    db.query(
-                        "INSERT INTO activities (application_id, candidate_name, action, details) VALUES (?, ?, 'Stage Transition', ?)",
-                        [id, app.candidate_name, `Moved from ${oldStatus} to ${status}`],
-                        (actErr) => {
-                            if (actErr) console.error("Failed to insert transition activity:", actErr);
-                            
-                            // Broadcast pipeline notification
-                            notifyRecruiters(
-                                "PIPELINE_STAGE_CHANGED",
-                                "NORMAL",
-                                "Pipeline Stage Transition",
-                                `Candidate ${app.candidate_name} moved from ${oldStatus} to ${status}`
-                            );
-
-                            res.status(200).json({
-                                message: "Status Updated",
-                                status
-                            });
-                        }
+            db.query(
+                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Stage Transition', ?, ?)",
+                [id, app.candidate_name || "Applicant", `Moved from ${oldStatus} to ${status}`, req.user.organization_id],
+                (actErr) => {
+                    if (actErr) console.error("Failed to insert transition activity:", actErr);
+                    
+                    // Broadcast pipeline notification using user organization context
+                    notifyRecruiters(
+                        "PIPELINE_STAGE_CHANGED",
+                        "NORMAL",
+                        "Pipeline Stage Transition",
+                        `Candidate ${app.candidate_name || "Applicant"} moved from ${oldStatus} to ${status}`
                     );
+
+                    logAuditEvent({
+                        req,
+                        eventCategory: "APPLICATION",
+                        action: "APPLICATION_STATUS_CHANGED",
+                        resourceType: "APPLICATION",
+                        resourceId: id,
+                        metadata: { oldStatus, newStatus: status }
+                    });
+
+                    res.status(200).json({
+                        message: "Status Updated",
+                        status
+                    });
                 }
             );
-        }
-    );
+        });
+    });
 };
-
 
 // ====================================
 // SHORTLIST APPLICATION
@@ -218,47 +258,44 @@ const updateApplicationStatus = (req, res) => {
 const shortlistApplication = (req, res) => {
     const id = req.params.id;
 
-    db.query(
-        "SELECT candidate_name FROM applications WHERE id = ?",
-        [id],
-        (findErr, rows) => {
-            if (findErr || !rows || rows.length === 0) {
-                return res.status(404).json({ message: "Application not found" });
+    verifyAppAccess(id, req, (authErr, app) => {
+        if (authErr) return res.status(403).json({ message: authErr.message });
+
+        Application.shortlistApplication(id, (err, result) => {
+            if (err) {
+                return res.status(500).json({ message: "Database Error" });
             }
-            const app = rows[0];
 
-            Application.shortlistApplication(
-                id,
-                (err, result) => {
-                    if (err) {
-                        return res.status(500).json({ message: "Database Error" });
-                    }
-
-                    db.query(
-                        "INSERT INTO activities (application_id, candidate_name, action, details) VALUES (?, ?, 'Shortlist', 'Candidate shortlisted for interview stages')",
-                        [id, app.candidate_name],
-                        (actErr) => {
-                            if (actErr) console.error("Failed to insert shortlist activity:", actErr);
-                            
-                            // Broadcast pipeline notification
-                            notifyRecruiters(
-                                "PIPELINE_STAGE_CHANGED",
-                                "HIGH",
-                                "Candidate Shortlisted",
-                                `Candidate ${app.candidate_name} has been shortlisted for interview rounds.`
-                            );
-
-                            res.status(200).json({
-                                message: "Candidate Shortlisted"
-                            });
-                        }
+            db.query(
+                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Shortlist', 'Candidate shortlisted for interview stages', ?)",
+                [id, app.candidate_name || "Applicant", req.user.organization_id],
+                (actErr) => {
+                    if (actErr) console.error("Failed to insert shortlist activity:", actErr);
+                    
+                    notifyRecruiters(
+                        "PIPELINE_STAGE_CHANGED",
+                        "HIGH",
+                        "Candidate Shortlisted",
+                        `Candidate ${app.candidate_name || "Applicant"} has been shortlisted for interview rounds.`
                     );
+
+                    logAuditEvent({
+                        req,
+                        eventCategory: "APPLICATION",
+                        action: "APPLICATION_STATUS_CHANGED",
+                        resourceType: "APPLICATION",
+                        resourceId: id,
+                        metadata: { oldStatus: app.status, newStatus: "Shortlisted" }
+                    });
+
+                    res.status(200).json({
+                        message: "Candidate Shortlisted"
+                    });
                 }
             );
-        }
-    );
+        });
+    });
 };
-
 
 // ====================================
 // REJECT APPLICATION
@@ -267,164 +304,103 @@ const rejectApplication = (req, res) => {
     const id = req.params.id;
     const { reason } = req.body;
 
-    db.query(
-        "SELECT candidate_name FROM applications WHERE id = ?",
-        [id],
-        (findErr, rows) => {
-            if (findErr || !rows || rows.length === 0) {
-                return res.status(404).json({ message: "Application not found" });
+    verifyAppAccess(id, req, (authErr, app) => {
+        if (authErr) return res.status(403).json({ message: authErr.message });
+
+        Application.rejectApplication(id, reason || null, (err, result) => {
+            if (err) {
+                return res.status(500).json({ message: "Database Error" });
             }
-            const app = rows[0];
 
-            Application.rejectApplication(
-                id,
-                reason || null,
-                (err, result) => {
-                    if (err) {
-                        return res.status(500).json({ message: "Database Error" });
-                    }
-
-                    db.query(
-                        "INSERT INTO activities (application_id, candidate_name, action, details) VALUES (?, ?, 'Rejection', ?)",
-                        [id, app.candidate_name, reason || 'No rejection reason logged'],
-                        (actErr) => {
-                            if (actErr) console.error("Failed to insert rejection activity:", actErr);
-                            
-                            // Broadcast pipeline notification
-                            notifyRecruiters(
-                                "CANDIDATE_REJECTED",
-                                "NORMAL",
-                                "Candidate Rejected",
-                                `Candidate ${app.candidate_name} marked Rejected. Reason: ${reason || 'None provided'}`
-                            );
-
-                            res.status(200).json({
-                                message: "Candidate Rejected"
-                            });
-                        }
+            db.query(
+                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Rejection', ?, ?)",
+                [id, app.candidate_name || "Applicant", reason || 'No rejection reason logged', req.user.organization_id],
+                (actErr) => {
+                    if (actErr) console.error("Failed to insert rejection activity:", actErr);
+                    
+                    notifyRecruiters(
+                        "CANDIDATE_REJECTED",
+                        "NORMAL",
+                        "Candidate Rejected",
+                        `Candidate ${app.candidate_name || "Applicant"} marked Rejected. Reason: ${reason || 'None provided'}`
                     );
+
+                    logAuditEvent({
+                        req,
+                        eventCategory: "APPLICATION",
+                        action: "APPLICATION_STATUS_CHANGED",
+                        resourceType: "APPLICATION",
+                        resourceId: id,
+                        metadata: { oldStatus: app.status, newStatus: "Rejected", reason }
+                    });
+
+                    res.status(200).json({
+                        message: "Candidate Rejected"
+                    });
                 }
             );
-        }
-    );
+        });
+    });
 };
-
 
 // ====================================
 // UPDATE NOTES
 // ====================================
-
 const updateNotes = (req, res) => {
-
     const id = req.params.id;
     const { notes } = req.body;
 
-    Application.updateNotes(
+    verifyAppAccess(id, req, (authErr, app) => {
+        if (authErr) return res.status(403).json({ message: authErr.message });
 
-        id,
-        notes || null,
-
-        (err, result) => {
-
+        Application.updateNotes(id, notes || null, (err, result) => {
             if (err) {
-
-                return res.status(500).json({
-
-                    message:
-
-                    "Database Error"
-
-                });
-
+                return res.status(500).json({ message: "Database Error" });
             }
-
-            res.status(200).json({
-
-                message:
-
-                "Notes Updated"
-
+            logAuditEvent({
+                req,
+                eventCategory: "CANDIDATE",
+                action: "CANDIDATE_UPDATED",
+                resourceType: "APPLICATION",
+                resourceId: id,
+                metadata: { field: "recruiter_notes" }
             });
 
-        }
-
-    );
-
+            res.status(200).json({
+                message: "Notes Updated"
+            });
+        });
+    });
 };
-
 
 // ====================================
 // UPDATE MATCH SCORE
 // ====================================
-
 const updateMatchScore = (req, res) => {
-
     const id = req.params.id;
+    const { match_score } = req.body;
 
-    const {
+    verifyAppAccess(id, req, (authErr, app) => {
+        if (authErr) return res.status(403).json({ message: authErr.message });
 
-        match_score
-
-    }
-
-    = req.body;
-
-
-    Application.updateMatchScore(
-
-        id,
-
-        match_score,
-
-        (err, result) => {
-
+        Application.updateMatchScore(id, match_score, (err, result) => {
             if (err) {
-
-                return res.status(500).json({
-
-                    message:
-
-                    "Database Error"
-
-                });
-
+                return res.status(500).json({ message: "Database Error" });
             }
-
             res.status(200).json({
-
-                message:
-
-                "Match Score Updated Successfully"
-
+                message: "Match Score Updated Successfully"
             });
-
-        }
-
-    );
-
+        });
+    });
 };
 
-
-// ====================================
-// EXPORTS
-// ====================================
-
 module.exports = {
-
     createApplication,
-
     getApplications,
-
     getApplicationByEmail,
-
     updateApplicationStatus,
-
     shortlistApplication,
-
     rejectApplication,
-
     updateNotes,
-
     updateMatchScore
-
 };

@@ -1,31 +1,28 @@
 import { Navigate } from "react-router-dom";
 
 function RoleProtectedRoute({
-
     children,
-
     allowedRoles
-
 }) {
+    const role = localStorage.getItem("role");
 
-    const role = localStorage.getItem(
-
-        "role"
-
-    );
-
-    if (
-
-        allowedRoles.includes(role)
-
-    ) {
-
-        return children;
-
+    // Support Recruiter & HR as aliases on frontend too
+    let effectiveRole = role;
+    if (effectiveRole === "HR" && allowedRoles.includes("Recruiter")) {
+        effectiveRole = "Recruiter";
+    }
+    if (effectiveRole === "Recruiter" && allowedRoles.includes("HR")) {
+        effectiveRole = "HR";
     }
 
-    return <Navigate to="/dashboard" />;
+    if (
+        allowedRoles.includes(effectiveRole) ||
+        allowedRoles.includes(role)
+    ) {
+        return children;
+    }
 
+    return <Navigate to="/unauthorized" />;
 }
 
 export default RoleProtectedRoute;

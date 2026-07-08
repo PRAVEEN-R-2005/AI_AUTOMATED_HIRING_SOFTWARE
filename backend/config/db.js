@@ -7,12 +7,19 @@ const dbConfig = {
     password: process.env.DB_PASSWORD || "",
 };
 
+// Initialize database initialization promise
+let resolveInit;
+const initPromise = new Promise((resolve) => {
+    resolveInit = resolve;
+});
+
 // Connect to MySQL server first to verify/create database and tables
 const initConnection = mysql.createConnection(dbConfig);
 
 initConnection.connect((err) => {
     if (err) {
         console.error("MySQL Server Connection Failed (Initialization):", err.message);
+        resolveInit();
         return;
     }
 
@@ -21,6 +28,7 @@ initConnection.connect((err) => {
         if (err) {
             console.error("Failed to create database:", err.message);
             initConnection.end();
+            resolveInit();
             return;
         }
 
@@ -28,6 +36,7 @@ initConnection.connect((err) => {
             if (err) {
                 console.error("Failed to select database:", err.message);
                 initConnection.end();
+                resolveInit();
                 return;
             }
 
@@ -137,6 +146,89 @@ initConnection.connect((err) => {
                     message TEXT,
                     delivery_status VARCHAR(50) DEFAULT 'SENT',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )`,
+                `CREATE TABLE IF NOT EXISTS organizations (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    slug VARCHAR(255) NOT NULL UNIQUE,
+                    status VARCHAR(50) DEFAULT 'ACTIVE',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )`,
+                `CREATE TABLE IF NOT EXISTS memberships (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    organization_id INT NOT NULL,
+                    role VARCHAR(50) NOT NULL,
+                    status VARCHAR(50) DEFAULT 'ACTIVE',
+                    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_user_org (user_id, organization_id)
+                )`,
+                `CREATE TABLE IF NOT EXISTS invitations (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    organization_id INT NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    role VARCHAR(50) NOT NULL,
+                    token_hash VARCHAR(255) NOT NULL UNIQUE,
+                    invited_by INT NOT NULL,
+                    status VARCHAR(50) DEFAULT 'PENDING',
+                    expires_at TIMESTAMP NOT NULL,
+                    accepted_at TIMESTAMP NULL DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+                    FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE
+                )`,
+                `CREATE TABLE IF NOT EXISTS job_assignments (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    job_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    assigned_role VARCHAR(50) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_job_user (job_id, user_id)
+                )`,
+                `CREATE TABLE IF NOT EXISTS comments (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    organization_id INT NOT NULL,
+                    resource_type VARCHAR(100) NOT NULL,
+                    resource_id INT NOT NULL,
+                    author_id INT NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+                    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+                )`,
+                `CREATE TABLE IF NOT EXISTS mentions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    comment_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )`,
+                `CREATE TABLE IF NOT EXISTS audit_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    organization_id INT NOT NULL,
+                    actor_id INT DEFAULT NULL,
+                    actor_name VARCHAR(255) NOT NULL,
+                    actor_email VARCHAR(255) NOT NULL,
+                    event_category VARCHAR(100) NOT NULL,
+                    action VARCHAR(255) NOT NULL,
+                    resource_type VARCHAR(100) NOT NULL,
+                    resource_id INT DEFAULT NULL,
+                    result VARCHAR(50) NOT NULL,
+                    ip_address VARCHAR(45) DEFAULT NULL,
+                    user_agent VARCHAR(255) DEFAULT NULL,
+                    metadata TEXT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+                    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL
                 )`
             ];
 
@@ -192,28 +284,275 @@ initConnection.connect((err) => {
                 });
             }
 
-            // Seed default demo users if users table is empty
+            // Self-healing columns for Organization isolation
+            const orgColMigrations = [
+                "ALTER TABLE jobs ADD COLUMN organization_id INT DEFAULT NULL",
+                "ALTER TABLE job_descriptions ADD COLUMN organization_id INT DEFAULT NULL",
+                "ALTER TABLE applications ADD COLUMN organization_id INT DEFAULT NULL",
+                "ALTER TABLE interviews ADD COLUMN organization_id INT DEFAULT NULL",
+                "ALTER TABLE activities ADD COLUMN organization_id INT DEFAULT NULL",
+                "ALTER TABLE communications ADD COLUMN organization_id INT DEFAULT NULL"
+            ];
+
+            for (const colSql of orgColMigrations) {
+                await new Promise((resolve) => {
+                    initConnection.query(colSql, () => resolve());
+                });
+            }
+
+            // Self-healing columns for Organization Settings & Defaults
+            const orgSettingCols = [
+                "ALTER TABLE organizations ADD COLUMN logo_url TEXT DEFAULT NULL",
+                "ALTER TABLE organizations ADD COLUMN industry VARCHAR(255) DEFAULT NULL",
+                "ALTER TABLE organizations ADD COLUMN company_size VARCHAR(100) DEFAULT NULL",
+                "ALTER TABLE organizations ADD COLUMN website VARCHAR(255) DEFAULT NULL",
+                "ALTER TABLE organizations ADD COLUMN timezone VARCHAR(100) DEFAULT 'UTC'",
+                "ALTER TABLE organizations ADD COLUMN locale VARCHAR(50) DEFAULT 'en-US'",
+                "ALTER TABLE organizations ADD COLUMN default_pipeline VARCHAR(100) DEFAULT 'Standard'",
+                "ALTER TABLE organizations ADD COLUMN default_interview_duration INT DEFAULT 30",
+                "ALTER TABLE organizations ADD COLUMN default_interview_type VARCHAR(100) DEFAULT 'Video'",
+                "ALTER TABLE organizations ADD COLUMN default_application_stage VARCHAR(100) DEFAULT 'Applied'",
+                "ALTER TABLE organizations ADD COLUMN default_analytics_range VARCHAR(50) DEFAULT '30_days'"
+            ];
+
+            for (const colSql of orgSettingCols) {
+                await new Promise((resolve) => {
+                    initConnection.query(colSql, () => resolve());
+                });
+            }
+
+            // Self-healing columns for User Settings & Preferences
+            const userPreferenceCols = [
+                "ALTER TABLE users ADD COLUMN phone VARCHAR(50) DEFAULT NULL",
+                "ALTER TABLE users ADD COLUMN job_title VARCHAR(100) DEFAULT NULL",
+                "ALTER TABLE users ADD COLUMN timezone VARCHAR(100) DEFAULT 'UTC'",
+                "ALTER TABLE users ADD COLUMN locale VARCHAR(50) DEFAULT 'en-US'",
+                "ALTER TABLE users ADD COLUMN default_landing_page VARCHAR(100) DEFAULT '/dashboard'",
+                "ALTER TABLE users ADD COLUMN default_analytics_range VARCHAR(50) DEFAULT '30_days'",
+                "ALTER TABLE users ADD COLUMN default_candidate_view VARCHAR(50) DEFAULT 'list'",
+                "ALTER TABLE users ADD COLUMN default_pipeline_view VARCHAR(50) DEFAULT 'kanban'",
+                "ALTER TABLE users ADD COLUMN theme VARCHAR(20) DEFAULT 'light'"
+            ];
+
+            for (const colSql of userPreferenceCols) {
+                await new Promise((resolve) => {
+                    initConnection.query(colSql, () => resolve());
+                });
+            }
+
+            // Self-healing database indexing
+            const addIndexIfNotExists = (tableName, indexName, columnsSql) => {
+                return new Promise((resolve) => {
+                    const checkSql = `
+                        SELECT COUNT(*) AS count 
+                        FROM INFORMATION_SCHEMA.STATISTICS 
+                        WHERE TABLE_SCHEMA = DATABASE() 
+                          AND TABLE_NAME = ? 
+                          AND INDEX_NAME = ?
+                    `;
+                    initConnection.query(checkSql, [tableName, indexName], (err, rows) => {
+                        if (!err && rows && rows[0].count === 0) {
+                            initConnection.query(`CREATE INDEX \`${indexName}\` ON \`${tableName}\` (${columnsSql})`, (createErr) => {
+                                if (createErr) console.error(`Failed to create index ${indexName} on ${tableName}:`, createErr.message);
+                                resolve();
+                            });
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+            };
+
+            await addIndexIfNotExists("applications", "idx_applications_org_email_status", "`organization_id`, `email`, `status`");
+            await addIndexIfNotExists("interviews", "idx_interviews_org_cand_email_status", "`organization_id`, `candidate_id`, `email`, `status`");
+            await addIndexIfNotExists("job_descriptions", "idx_job_desc_org", "`organization_id`");
+            await addIndexIfNotExists("jobs", "idx_jobs_org", "`organization_id`");
+
+            // Seed default demo organization
+            await new Promise((resolve) => {
+                initConnection.query(
+                    "INSERT IGNORE INTO organizations (id, name, slug, status) VALUES (1, 'Demo Org', 'demo-org', 'ACTIVE')",
+                    () => resolve()
+                );
+            });
+
+            // Seed default demo users and their organization memberships if users table is empty
             initConnection.query("SELECT COUNT(*) as count FROM users", async (err, results) => {
                 if (!err && results && results[0].count === 0) {
                     console.log("Seeding default demo users...");
                     const demoUsers = [
-                        { name: "Admin User", email: "admin@gmail.com", password: "admin123", role: "Admin" },
-                        { name: "HR Manager", email: "hr@gmail.com", password: "123456", role: "HR" },
-                        { name: "Candidate User", email: "candidate@gmail.com", password: "123456", role: "Candidate" }
+                        { name: "Admin User", email: "admin@gmail.com", password: "admin123", role: "Admin", orgRole: "Admin" },
+                        { name: "HR Manager", email: "hr@gmail.com", password: "123456", role: "HR", orgRole: "Recruiter" },
+                        { name: "Candidate User", email: "candidate@gmail.com", password: "123456", role: "Candidate", orgRole: null }
                     ];
 
                     for (const user of demoUsers) {
                         const hashedPassword = await bcrypt.hash(user.password, 10);
                         initConnection.query(
                             "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-                            [user.name, user.email, hashedPassword, user.role]
+                            [user.name, user.email, hashedPassword, user.role],
+                            (insErr, insRes) => {
+                                if (!insErr && insRes && user.orgRole) {
+                                    const userId = insRes.insertId;
+                                    initConnection.query(
+                                        "INSERT IGNORE INTO memberships (user_id, organization_id, role, status) VALUES (?, 1, ?, 'ACTIVE')",
+                                        [userId, user.orgRole]
+                                    );
+                                }
+                            }
                         );
+                    }
+                } else {
+                    // Backfill memberships for existing database users if they do not have them
+                    initConnection.query("SELECT id, email, role FROM users", (err, usersList) => {
+                        if (!err && usersList) {
+                            for (const u of usersList) {
+                                let orgRole = null;
+                                if (u.email === "admin@gmail.com") orgRole = "Admin";
+                                else if (u.email === "hr@gmail.com") orgRole = "Recruiter";
+                                else if (u.role === "Admin") orgRole = "Admin";
+                                else if (u.role === "HR") orgRole = "Recruiter";
+
+                                if (orgRole) {
+                                    initConnection.query(
+                                        "INSERT IGNORE INTO memberships (user_id, organization_id, role, status) VALUES (?, 1, ?, 'ACTIVE')",
+                                        [u.id, orgRole]
+                                    );
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Seeding default demo job descriptions and candidate applications if empty
+            initConnection.query("SELECT COUNT(*) as count FROM job_descriptions", async (jdErr, jdCountRes) => {
+                if (!jdErr && jdCountRes && jdCountRes[0].count === 0) {
+                    console.log("Seeding default demo job descriptions, candidates, applications, interviews, activities, notifications, and comments...");
+
+                    // 1. Seed open Job Postings
+                    const jds = [
+                        [1, "Senior Full-Stack Engineer", "React, Node.js, SQL, REST APIs", "5-8 Years", "$120,000 - $150,000", "Remote", "Design and build scalable microservice architectures and interactive frontend web platforms.", "hr@gmail.com", "Active", 1],
+                        [2, "AI Research Specialist", "Python, PyTorch, Transformers, NLP", "3-5 Years", "$140,000 - $180,000", "Hybrid (San Francisco, CA)", "Develop, optimize, and fine-tune natural language modeling systems and deep learning algorithms.", "hr@gmail.com", "Active", 1]
+                    ];
+                    for (const jd of jds) {
+                        await new Promise((resolve) => {
+                            initConnection.query(
+                                "INSERT INTO job_descriptions (jd_id, title, skills, experience, salary, location, description, created_by, status, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                jd,
+                                () => resolve()
+                            );
+                        });
+                    }
+
+                    // 2. Seed Candidates
+                    const candidates = [
+                        [1, "John Smith", "john.smith@example.com", "john_smith_resume.pdf"],
+                        [2, "Sarah Connor", "sarah.connor@example.com", "sarah_connor_resume.pdf"],
+                        [3, "David Miller", "david.miller@example.com", "david_miller_resume.pdf"]
+                    ];
+                    for (const c of candidates) {
+                        await new Promise((resolve) => {
+                            initConnection.query(
+                                "INSERT INTO candidates (id, name, email, resume) VALUES (?, ?, ?, ?)",
+                                c,
+                                () => resolve()
+                            );
+                        });
+                    }
+
+                    // 3. Seed Applications with structured AI Screen details
+                    const apps = [
+                        [1, "John Smith", "john.smith@example.com", "555-0100", 1, "john_smith_resume.pdf", "Shortlisted", 85, 90, 80, 85, "React, Node.js, SQL", "AWS", "Docker, CSS", "Excellent full stack engineer candidate.", "Ask about database pool connection pool scaling.", "Strong technical candidate with SQL tuning experience.", "Strong Fit", 1],
+                        [2, "Sarah Connor", "sarah.connor@example.com", "555-0199", 2, "sarah_connor_resume.pdf", "Interview", 92, 95, 90, 90, "Python, PyTorch, Transformers", "Docker", "Git, LaTeX", "Excellent deep learning experience and publications.", "Inquire about transformers fine-tuning.", "Top-tier candidate for the research division.", "Top Tier", 1],
+                        [3, "David Miller", "david.miller@example.com", "555-0122", 1, "david_miller_resume.pdf", "Pending", 45, 50, 40, 45, "React", "Node.js, SQL", "HTML, CSS, JavaScript", "Clean interface design principles.", "Lacks backend microservices database architecture.", "Weak full-stack experience.", "Weak Fit", 1]
+                    ];
+                    for (const app of apps) {
+                        await new Promise((resolve) => {
+                            initConnection.query(
+                                `INSERT INTO applications 
+                                (id, candidate_name, email, phone, job_id, resume_file, status, match_score, skills_score, experience_score, education_score, matched_skills, missing_skills, additional_skills, candidate_strengths, review_considerations, ai_summary, recommendation, organization_id) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                app,
+                                () => resolve()
+                            );
+                        });
+                    }
+
+                    // 4. Seed Interviews
+                    const interviews = [
+                        [2, "Sarah Connor", "sarah.connor@example.com", "555-0199", 92, "2026-07-15", "10:00 AM", "Video", "HR Manager", "Scheduled", "Technical Interview", 45, "https://meet.google.com/abc-defg-hij", 1]
+                    ];
+                    for (const iv of interviews) {
+                        await new Promise((resolve) => {
+                            initConnection.query(
+                                `INSERT INTO interviews 
+                                (candidate_id, candidate_name, email, phone, ai_score, interview_date, interview_time, mode, interviewer, status, round, duration, meeting_link, organization_id) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                iv,
+                                () => resolve()
+                            );
+                        });
+                    }
+
+                    // 5. Seed Activities
+                    const activities = [
+                        [1, "John Smith", "STAGE_CHANGE", "Candidate moved from Applied to Shortlisted.", 1],
+                        [2, "Sarah Connor", "STAGE_CHANGE", "Candidate moved from Applied to Interview.", 1],
+                        [3, "David Miller", "APPLICATION_SUBMITTED", "Applied to Senior Full-Stack Engineer.", 1]
+                    ];
+                    for (const act of activities) {
+                        await new Promise((resolve) => {
+                            initConnection.query(
+                                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, ?, ?, ?)",
+                                act,
+                                () => resolve()
+                            );
+                        });
+                    }
+
+                    // 6. Seed Notifications
+                    const notifications = [
+                        ["hr@gmail.com", "INTERVIEW_SCHEDULED", "HIGH", "Interview Scheduled", "Technical Interview for Sarah Connor with HR Manager on 2026-07-15 10:00 AM"],
+                        ["hr@gmail.com", "CANDIDATE_APPLIED", "NORMAL", "New Candidate Application", "David Miller applied for Senior Full-Stack Engineer Requisition."]
+                    ];
+                    for (const n of notifications) {
+                        await new Promise((resolve) => {
+                            initConnection.query(
+                                "INSERT INTO notifications (user_email, type, priority, title, message) VALUES (?, ?, ?, ?, ?)",
+                                n,
+                                () => resolve()
+                            );
+                        });
+                    }
+
+                    // 7. Seed Comments
+                    const comments = [
+                        [1, "application", 1, 2, "John Smith has excellent client-side skills and a robust full-stack project portfolio. Recommended for final panel rounds."]
+                    ];
+                    for (const comment of comments) {
+                        await new Promise((resolve) => {
+                            initConnection.query(
+                                "INSERT INTO comments (organization_id, resource_type, resource_id, author_id, content) VALUES (?, ?, ?, ?, ?)",
+                                comment,
+                                () => resolve()
+                            );
+                        });
                     }
                 }
             });
 
+            // Backfill organization_id for existing resource rows
+            const tablesToBackfill = ["jobs", "job_descriptions", "applications", "interviews", "activities", "communications"];
+            for (const table of tablesToBackfill) {
+                await new Promise((resolve) => {
+                    initConnection.query(`UPDATE ${table} SET organization_id = 1 WHERE organization_id IS NULL`, () => resolve());
+                });
+            }
+
             console.log("Database and tables initialized successfully.");
             initConnection.end();
+            resolveInit();
         });
     });
 });
@@ -231,4 +570,5 @@ console.log("HOST:", process.env.DB_HOST);
 console.log("USER:", process.env.DB_USER);
 console.log("DATABASE:", process.env.DB_NAME);
 
+pool.initPromise = initPromise;
 module.exports = pool;

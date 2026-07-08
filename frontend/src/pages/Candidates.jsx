@@ -8,6 +8,7 @@ import Button from "../components/ui/Button";
 import Select from "../components/ui/Select";
 import Modal from "../components/ui/Modal";
 import Skeleton from "../components/ui/Skeleton";
+import TeamComments from "../components/ui/TeamComments";
 import EmptyState from "../components/feedback/EmptyState";
 import ErrorState from "../components/feedback/ErrorState";
 import {
@@ -625,15 +626,19 @@ function Candidates() {
                     <textarea
                       id="notesText"
                       className="form-control"
-                      rows="5"
+                      rows="3"
                       placeholder="Add assessment updates, pipeline schedules, or interviewer comments here..."
                       value={notesText}
                       onChange={(e) => setNotesText(e.target.value)}
                     />
+                    <div className="d-flex justify-content-end mt-2">
+                      <Button variant="primary" loading={notesSaving} onClick={handleSaveNotes}>
+                        Save Notes
+                      </Button>
+                    </div>
                   </div>
-                  <Button variant="primary" loading={notesSaving} onClick={handleSaveNotes} className="align-self-end">
-                    Save Notes
-                  </Button>
+                  <hr style={{ borderColor: "var(--border)", opacity: 0.2 }} />
+                  <TeamComments resourceType="application" resourceId={selectedCandidate.id} />
                 </div>
               )}
 
