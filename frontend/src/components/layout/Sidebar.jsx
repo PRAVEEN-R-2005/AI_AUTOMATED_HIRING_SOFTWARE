@@ -104,19 +104,19 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
       style={{ height: "100vh", position: "sticky", top: 0, zIndex: 1020 }}
     >
       {/* Header / Brand */}
-      <div className="d-flex align-items-center justify-content-between p-4 border-bottom border-secondary">
+      <div className="d-flex align-items-center justify-content-between p-4" style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
         {!isCollapsed && (
           <div className="d-flex flex-column">
             <h5 className="fw-bold mb-0 text-white text-truncate" style={{ letterSpacing: "0.05em" }}>
               Smart ATS
             </h5>
-            <small className="text-muted" style={{ fontSize: "0.7rem" }}>
+            <small className="sidebar-subtitle">
               AI RECRUITMENT
             </small>
           </div>
         )}
         {isCollapsed && (
-          <div className="mx-auto fw-bold text-white text-uppercase" style={{ fontSize: "0.85rem" }}>
+          <div className="mx-auto fw-bold text-white text-uppercase" style={{ fontSize: "0.85rem", letterSpacing: "0.05em" }}>
             ATS
           </div>
         )}
@@ -131,20 +131,17 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
               <li key={item.path} className="nav-item">
                 <Link
                   to={item.path}
-                  className={`nav-link d-flex align-items-center gap-3 px-3 py-2.5 rounded-sm text-decoration-none transition-all ${
-                    isActive ? "bg-primary text-white" : "text-muted hover:text-white"
-                  }`}
+                  className={`sidebar-nav-link ${isActive ? "active" : ""}`}
                   style={{
                     borderRadius: "var(--radius-sm)",
-                    color: isActive ? "#ffffff" : "#94a3b8",
-                    transition: "all var(--transition-fast)",
+                    fontSize: "0.925rem",
                   }}
                   title={isCollapsed ? item.label : ""}
                 >
                   <span style={{ fontSize: "1.1rem" }} className="d-flex align-items-center">
                     {item.icon}
                   </span>
-                  {!isCollapsed && <span style={{ fontSize: "0.925rem" }}>{item.label}</span>}
+                  {!isCollapsed && <span>{item.label}</span>}
                 </Link>
               </li>
             );
@@ -153,16 +150,18 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
       </nav>
 
       {/* Footer / Logout */}
-      <div className="p-3 border-top border-secondary">
+      <div className="p-3" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
         <button
           onClick={handleLogout}
-          className="btn-custom btn-custom-ghost w-100 d-flex align-items-center gap-3 px-3 py-2.5"
+          className="sidebar-logout-button w-100 d-flex align-items-center gap-3 px-3 py-2.5"
           style={{
             color: "#ef4444",
             justifyContent: isCollapsed ? "center" : "flex-start",
             border: "none",
             background: "transparent",
-            padding: 0,
+            cursor: "pointer",
+            borderRadius: "var(--radius-sm)",
+            padding: "10px 16px",
           }}
           title={isCollapsed ? "Logout" : ""}
         >
