@@ -271,7 +271,7 @@ const loginUser = (req, res) => {
     const normalizedPassword = password.trim();
 
     // Backend-side bypass for demo credentials (works even if database is empty/unseeded)
-    const isDemoBypassAllowed = process.env.DEMO_MODE === "true";
+    const isDemoBypassAllowed = process.env.DEMO_MODE === "true" && process.env.NODE_ENV !== "production";
     if (
         isDemoBypassAllowed &&
         ((normalizedEmail === "admin@gmail.com" && normalizedPassword === "admin123") ||

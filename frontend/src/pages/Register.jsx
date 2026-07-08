@@ -15,6 +15,7 @@ function Register() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("Candidate");
   const [loading, setLoading] = useState(false);
+  const [wakingUp, setWakingUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async (e) => {
@@ -31,6 +32,11 @@ function Register() {
     }
 
     setLoading(true);
+    setWakingUp(false);
+
+    const wakingUpTimer = setTimeout(() => {
+      setWakingUp(true);
+    }, 5000);
 
     try {
       const response = await api.post("/api/auth/register", {
@@ -38,17 +44,21 @@ function Register() {
         email: email.trim().toLowerCase(),
         password,
         role,
-      });
+      }, { timeout: 60000 });
 
       alert(response.data.message || "Registration Successful!");
       navigate("/login");
     } catch (error) {
-      if (error.response && error.response.data) {
+      if (error.code === 'ECONNABORTED' || !error.response) {
+        alert("Waking up server, this can take up to a minute on first request. Please try again shortly.");
+      } else if (error.response && error.response.data) {
         alert(error.response.data.message || "Registration Failed");
       } else {
         alert("Server Error");
       }
     } finally {
+      clearTimeout(wakingUpTimer);
+      setWakingUp(false);
       setLoading(false);
     }
   };
@@ -184,6 +194,12 @@ function Register() {
             >
               Sign Up
             </Button>
+
+            {wakingUp && (
+              <div className="alert alert-info py-2 px-3 mt-3 mb-0 text-center" style={{ fontSize: "0.85rem", background: "rgba(13, 202, 240, 0.15)", border: "1px solid rgba(13, 202, 240, 0.3)", color: "#0dcaf0" }}>
+                Waking up server, this can take up to a minute on first request
+              </div>
+            )}
 
             <Button
               type="button"

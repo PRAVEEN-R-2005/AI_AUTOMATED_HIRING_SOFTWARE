@@ -18,17 +18,23 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [wakingUp, setWakingUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setWakingUp(false);
+
+    const wakingUpTimer = setTimeout(() => {
+      setWakingUp(true);
+    }, 5000);
 
     try {
       const response = await api.post("/api/auth/login", {
         email,
         password
-      });
+      }, { timeout: 60000 });
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("role", response.data.role);
@@ -39,7 +45,7 @@ function Login() {
       } else {
         navigate("/dashboard");
       }
-    } catch {
+    } catch (error) {
       // Fallback for Vercel Demo / Offline Mode!
       const normalizedEmail = email?.trim().toLowerCase();
       const normalizedPassword = password?.trim();
@@ -64,18 +70,31 @@ function Login() {
         return;
       }
 
-      alert("Invalid Credentials");
+      if (error.code === 'ECONNABORTED' || !error.response) {
+        alert("Waking up server, this can take up to a minute on first request. Please try again shortly.");
+      } else {
+        alert(error.response.data?.message || "Invalid Credentials");
+      }
     } finally {
+      clearTimeout(wakingUpTimer);
+      setWakingUp(false);
       setLoading(false);
     }
   };
 
   const demoLogin = async (emailValue, passwordValue) => {
+    setLoading(true);
+    setWakingUp(false);
+
+    const wakingUpTimer = setTimeout(() => {
+      setWakingUp(true);
+    }, 5000);
+
     try {
       const response = await api.post("/api/auth/login", {
         email: emailValue,
         password: passwordValue
-      });
+      }, { timeout: 60000 });
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("role", response.data.role);
@@ -86,7 +105,7 @@ function Login() {
       } else {
         navigate("/dashboard");
       }
-    } catch {
+    } catch (error) {
       // Fallback for Vercel Demo / Offline Mode!
       const normalizedEmail = emailValue?.trim().toLowerCase();
       const normalizedPassword = passwordValue?.trim();
@@ -111,7 +130,15 @@ function Login() {
         return;
       }
 
-      alert("Demo Login Failed");
+      if (error.code === 'ECONNABORTED' || !error.response) {
+        alert("Waking up server, this can take up to a minute on first request. Please try again shortly.");
+      } else {
+        alert(error.response.data?.message || "Demo Login Failed");
+      }
+    } finally {
+      clearTimeout(wakingUpTimer);
+      setWakingUp(false);
+      setLoading(false);
     }
   };
 
@@ -221,6 +248,12 @@ function Login() {
                   >
                     Sign In
                   </Button>
+
+                  {wakingUp && (
+                    <div className="alert alert-info py-2 px-3 mt-3 mb-0 text-center" style={{ fontSize: "0.85rem", background: "rgba(13, 202, 240, 0.15)", border: "1px solid rgba(13, 202, 240, 0.3)", color: "#0dcaf0" }}>
+                      Waking up server, this can take up to a minute on first request
+                    </div>
+                  )}
 
                   <div className="my-4 text-center">
                     <hr style={{ borderColor: "rgba(255,255,255,0.15)" }} />
