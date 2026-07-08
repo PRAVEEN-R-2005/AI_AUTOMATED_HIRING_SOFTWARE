@@ -52,9 +52,9 @@ Copy `.env.example` to `.env` in the `backend` folder and configure database cre
 PORT=5000
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=Praveen@123
+DB_PASSWORD=your_secure_password
 DB_NAME=hr_hiring_system
-JWT_SECRET=development_bypass_secret_key
+JWT_SECRET=your_jwt_secret_key
 ```
 
 ### 3. Install and Launch Backend
