@@ -26,10 +26,7 @@ initConnection.connect((err) => {
     const dbName = process.env.DB_NAME || "hr_hiring_system";
     initConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``, (err) => {
         if (err) {
-            console.error("Failed to create database:", err.message);
-            initConnection.end();
-            resolveInit();
-            return;
+            console.warn("Warning: Failed to create database (might already exist or lack privileges):", err.message);
         }
 
         initConnection.query(`USE \`${dbName}\``, async (err) => {
