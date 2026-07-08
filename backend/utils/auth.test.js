@@ -95,9 +95,10 @@ test("Authentication Controller Tests", async (t) => {
             }, 50);
         });
 
-        assert.strictEqual(res.statusCode, 400);
+        assert.strictEqual(res.statusCode, 409);
         assert.strictEqual(res.jsonData.success, false);
-        assert.match(res.jsonData.message, /Email already registered/);
+        assert.strictEqual(res.jsonData.errorCode, "EMAIL_ALREADY_EXISTS");
+        assert.match(res.jsonData.message, /email already exists/i);
     });
 
     await t.test("Fail registration with short password", async () => {

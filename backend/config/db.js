@@ -1,11 +1,41 @@
+require("dotenv").config();
 const mysql = require("mysql2");
 const bcrypt = require("bcryptjs");
 
-const dbConfig = {
-    host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-};
+const connectionUrl = process.env.DATABASE_URL || process.env.MYSQL_URL || process.env.MYSQLURL;
+
+let dbConfig;
+let databaseName = process.env.DB_NAME || "hr_hiring_system";
+let initConfig;
+
+if (connectionUrl) {
+    dbConfig = connectionUrl;
+    initConfig = connectionUrl;
+    try {
+        const parsedUrl = new URL(connectionUrl);
+        const pathname = parsedUrl.pathname.replace("/", "");
+        if (pathname) {
+            databaseName = pathname;
+        }
+        // Build initialization config without a database name to connect to the server first
+        initConfig = {
+            host: parsedUrl.hostname,
+            user: parsedUrl.username,
+            password: decodeURIComponent(parsedUrl.password),
+            port: parsedUrl.port ? parseInt(parsedUrl.port) : 3306,
+        };
+    } catch (e) {
+        console.warn("Warning: Could not parse database connection URL for initialization, using connectionUrl directly:", e.message);
+    }
+} else {
+    dbConfig = {
+        host: process.env.DB_HOST || "localhost",
+        user: process.env.DB_USER || "root",
+        password: process.env.DB_PASSWORD || "",
+        port: process.env.DB_PORT || 3306,
+    };
+    initConfig = dbConfig;
+}
 
 // Initialize database initialization promise
 let resolveInit;
@@ -14,7 +44,7 @@ const initPromise = new Promise((resolve) => {
 });
 
 // Connect to MySQL server first to verify/create database and tables
-const initConnection = mysql.createConnection(dbConfig);
+const initConnection = mysql.createConnection(initConfig);
 
 initConnection.connect((err) => {
     if (err) {
@@ -23,7 +53,7 @@ initConnection.connect((err) => {
         return;
     }
 
-    const dbName = process.env.DB_NAME || "hr_hiring_system";
+    const dbName = databaseName;
     initConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``, (err) => {
         if (err) {
             console.warn("Warning: Failed to create database (might already exist or lack privileges):", err.message);
@@ -584,17 +614,23 @@ initConnection.connect((err) => {
 });
 
 // Create and export the pool configured with the database
-const pool = mysql.createPool({
-    ...dbConfig,
-    database: process.env.DB_NAME || "hr_hiring_system",
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+const pool = connectionUrl
+    ? mysql.createPool(connectionUrl)
+    : mysql.createPool({
+        ...dbConfig,
+        database: databaseName,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+    });
 
-console.log("HOST:", process.env.DB_HOST);
-console.log("USER:", process.env.DB_USER);
-console.log("DATABASE:", process.env.DB_NAME);
+if (connectionUrl) {
+    console.log("Database connected via DATABASE_URL/MYSQL_URL connection string");
+} else {
+    console.log("HOST:", dbConfig.host);
+    console.log("USER:", dbConfig.user);
+    console.log("DATABASE:", databaseName);
+}
 
 pool.initPromise = initPromise;
 module.exports = pool;

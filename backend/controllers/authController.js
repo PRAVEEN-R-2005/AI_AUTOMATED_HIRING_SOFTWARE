@@ -73,9 +73,10 @@ const registerUser = async (req, res) => {
                             try {
                                 if (usrErr) {
                                     if (usrErr.code === "ER_DUP_ENTRY") {
-                                        return res.status(400).json({
+                                        return res.status(409).json({
                                             success: false,
-                                            message: "Email already registered"
+                                            message: "An account with this email already exists",
+                                            errorCode: "EMAIL_ALREADY_EXISTS"
                                         });
                                     }
                                     console.error("Database error during user creation:", usrErr);
@@ -201,9 +202,10 @@ const registerUser = async (req, res) => {
                     try {
                         if (usrErr) {
                             if (usrErr.code === "ER_DUP_ENTRY") {
-                                return res.status(400).json({
+                                return res.status(409).json({
                                     success: false,
-                                    message: "Email already registered"
+                                    message: "An account with this email already exists",
+                                    errorCode: "EMAIL_ALREADY_EXISTS"
                                 });
                             }
                             console.error("Database error during user creation:", usrErr);

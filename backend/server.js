@@ -23,15 +23,20 @@ const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000"
-];
-if (process.env.FRONTEND_URL) {
-    allowedOrigins.push(process.env.FRONTEND_URL);
-}
+    "http://127.0.0.1:3000",
+    process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".vercel.app")) {
+        
+        const isAllowed = allowedOrigins.some(allowed => {
+            const normalizedAllowed = allowed.endsWith('/') ? allowed.slice(0, -1) : allowed;
+            return origin === normalizedAllowed;
+        });
+
+        if (isAllowed || origin.endsWith(".vercel.app")) {
             return callback(null, true);
         }
         return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
@@ -254,15 +259,15 @@ app.use("/api/comments", commentRoutes);
 
 app.get("/api/health", (req, res) => {
     res.status(200).json({
-        status: "ok",
-        timestamp: new Date().toISOString()
+        success: true,
+        message: "Smart ATS backend is running"
     });
 });
 
 app.get("/health", (req, res) => {
     res.status(200).json({
-        status: "ok",
-        timestamp: new Date().toISOString()
+        success: true,
+        message: "Smart ATS backend is running"
     });
 });
 
