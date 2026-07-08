@@ -101,6 +101,8 @@ initConnection.connect((err) => {
                 `CREATE TABLE IF NOT EXISTS interviews (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     candidate_id INT,
+                    application_id INT DEFAULT NULL,
+                    job_id INT DEFAULT NULL,
                     candidate_name VARCHAR(255),
                     email VARCHAR(255),
                     phone VARCHAR(50),
@@ -109,7 +111,13 @@ initConnection.connect((err) => {
                     interview_time VARCHAR(50),
                     mode VARCHAR(100),
                     interviewer VARCHAR(255),
+                    interviewer_id INT DEFAULT NULL,
+                    interviewer_name VARCHAR(255) DEFAULT NULL,
+                    round VARCHAR(100) DEFAULT 'Technical Interview',
+                    duration INT DEFAULT 30,
+                    meeting_link VARCHAR(500) DEFAULT NULL,
                     status VARCHAR(50) DEFAULT 'Scheduled',
+                    organization_id INT DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )`,
                 `CREATE TABLE IF NOT EXISTS candidates (
@@ -251,6 +259,23 @@ initConnection.connect((err) => {
             await new Promise((resolve) => {
                 initConnection.query("ALTER TABLE applications ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP", () => resolve());
             });
+
+            // Self-healing interview columns for scheduling workflow
+            const interviewColumns = [
+                "ALTER TABLE interviews ADD COLUMN application_id INT DEFAULT NULL",
+                "ALTER TABLE interviews ADD COLUMN job_id INT DEFAULT NULL",
+                "ALTER TABLE interviews ADD COLUMN interviewer_id INT DEFAULT NULL",
+                "ALTER TABLE interviews ADD COLUMN interviewer_name VARCHAR(255) DEFAULT NULL",
+                "ALTER TABLE interviews ADD COLUMN round VARCHAR(100) DEFAULT 'Technical Interview'",
+                "ALTER TABLE interviews ADD COLUMN duration INT DEFAULT 30",
+                "ALTER TABLE interviews ADD COLUMN meeting_link VARCHAR(500) DEFAULT NULL",
+                "ALTER TABLE interviews ADD COLUMN organization_id INT DEFAULT NULL"
+            ];
+            for (const columnSql of interviewColumns) {
+                await new Promise((resolve) => {
+                    initConnection.query(columnSql, () => resolve());
+                });
+            }
 
             // Self-healing columns for AI screening insights
             const aiColumns = [

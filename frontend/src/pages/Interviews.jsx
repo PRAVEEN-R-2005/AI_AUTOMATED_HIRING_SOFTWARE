@@ -62,7 +62,7 @@ function Interviews() {
   const [formCandidateId, setFormCandidateId] = useState("");
   const [formRound, setFormRound] = useState("Technical Interview");
   const [formMode, setFormMode] = useState("Video Call");
-  const [formInterviewer, setFormInterviewer] = useState("");
+  const [formInterviewerId, setFormInterviewerId] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formTime, setFormTime] = useState("");
   const [formDuration, setFormDuration] = useState("30");
@@ -93,8 +93,8 @@ function Interviews() {
       setInterviewers(fetchedInterviewers);
 
       // Pre-select first interviewer if available
-      if (fetchedInterviewers.length > 0 && !formInterviewer) {
-        setFormInterviewer(fetchedInterviewers[0].name);
+      if (fetchedInterviewers.length > 0 && !formInterviewerId) {
+        setFormInterviewerId(fetchedInterviewers[0].id);
       }
 
       // Pre-select applicant context if passed
@@ -136,7 +136,7 @@ function Interviews() {
       toast.warning("Please select a start time.");
       return;
     }
-    if (!formInterviewer) {
+    if (!formInterviewerId) {
       toast.warning("Please select an interviewer.");
       return;
     }
@@ -154,11 +154,18 @@ function Interviews() {
       return;
     }
 
+    const selectedInterviewer = interviewers.find(iv => String(iv.id) === String(formInterviewerId));
+    if (!selectedInterviewer) {
+      toast.error("Selected interviewer was not found.");
+      return;
+    }
+
     setScheduling(true);
     try {
       const payload = {
         candidate_id: app.id,
         application_id: app.id,
+        job_id: app.job_id ?? null,
         candidate_name: app.candidate_name,
         email: app.email,
         phone: app.phone || "N/A",
@@ -166,7 +173,9 @@ function Interviews() {
         interview_date: formDate,
         interview_time: formTime,
         mode: formMode,
-        interviewer: formInterviewer,
+        interviewer_id: selectedInterviewer.id,
+        interviewer_name: selectedInterviewer.name,
+        interviewer: selectedInterviewer.name,
         round: formRound,
         duration: formDuration,
         meeting_link: formMode === "Video Call" ? formMeetingLink : null
@@ -180,10 +189,16 @@ function Interviews() {
       setFormMeetingLink("");
       setFormDate("");
       setFormTime("");
+      setFormInterviewerId("");
       
       loadData();
     } catch (err) {
-      console.error("[Interviews] Scheduling failed:", err);
+      console.error("[Interviews] Scheduling failed", {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        errorCode: err.response?.data?.errorCode,
+        data: err.response?.data
+      });
       const backendMessage = err.response?.data?.message || err.response?.data?.error || "Failed to schedule interview. Please check for scheduling conflicts.";
       toast.error(backendMessage);
     } finally {
@@ -383,12 +398,12 @@ function Interviews() {
                     <div className="col-6">
                       <label className="form-label-custom mb-1">Assigned Interviewer</label>
                       <Select
-                        value={formInterviewer}
-                        onChange={(e) => setFormInterviewer(e.target.value)}
+                        value={formInterviewerId}
+                        onChange={(e) => setFormInterviewerId(e.target.value)}
                         options={
                           interviewers.length > 0
                             ? interviewers.map(iv => ({
-                                value: iv.name,
+                                value: iv.id,
                                 label: `${iv.name} (${iv.role})`
                               }))
                             : [

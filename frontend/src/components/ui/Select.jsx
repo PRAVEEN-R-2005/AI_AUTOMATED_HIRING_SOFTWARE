@@ -25,11 +25,14 @@ const Select = React.forwardRef(({
         required={required}
         {...props}
       >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
+        {options.map((opt) => {
+          const optionKey = opt.key ?? opt.id ?? opt.value;
+          return (
+            <option key={String(optionKey)} value={opt.value}>
+              {opt.label}
+            </option>
+          );
+        })}
       </select>
       {error && <p className="form-error-custom mt-1 text-danger" style={{ fontSize: "0.8rem", fontWeight: 500 }}>{error}</p>}
       {!error && helperText && <p className="form-helper-custom mt-1 text-muted-custom" style={{ fontSize: "0.8rem" }}>{helperText}</p>}

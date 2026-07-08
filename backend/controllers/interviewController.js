@@ -4,6 +4,8 @@ const { notifyRecruiters, createNotification } = require("../utils/notifier");
 
 const normalizeInterviewPayload = (body = {}) => {
     const candidateId = Number(body.candidate_id ?? body.candidateId ?? body.application_id ?? body.applicationId ?? body.id ?? 0);
+    const applicationId = Number(body.application_id ?? body.applicationId ?? body.application ?? body.id ?? 0);
+    const jobId = Number(body.job_id ?? body.jobId ?? body.jobRequisitionId ?? body.job_requisition_id ?? 0);
     const candidateName = body.candidate_name ?? body.candidateName ?? body.name ?? "";
     const email = body.email ?? body.candidate_email ?? body.candidateEmail ?? "";
     const phone = body.phone ?? body.contact_number ?? body.contactNumber ?? "N/A";
@@ -40,11 +42,15 @@ const normalizeInterviewPayload = (body = {}) => {
 
     const mode = body.mode ?? body.interviewType ?? body.interview_type ?? "Video Call";
     const round = body.round ?? body.roundType ?? body.round_type ?? "Technical Interview";
-    const interviewer = body.interviewer ?? body.interviewerName ?? body.interviewer_name ?? body.interviewerEmail ?? "";
+    const interviewerId = Number(body.interviewer_id ?? body.interviewerId ?? body.interviewer ?? 0);
+    const interviewerName = body.interviewer_name ?? body.interviewerName ?? body.interviewer ?? "";
+    const interviewer = interviewerName || body.interviewer || "";
     const meetingLink = body.meeting_link ?? body.meetingLink ?? (mode === "Video Call" ? body.meeting_link || body.meetingLink || "" : null);
 
     return {
         candidate_id: Number.isNaN(candidateId) ? null : candidateId,
+        application_id: Number.isNaN(applicationId) ? null : applicationId,
+        job_id: Number.isNaN(jobId) ? null : jobId,
         candidate_name: candidateName,
         email,
         phone,
@@ -53,6 +59,8 @@ const normalizeInterviewPayload = (body = {}) => {
         interview_time: interviewTime,
         mode,
         interviewer,
+        interviewer_id: Number.isNaN(interviewerId) ? null : interviewerId,
+        interviewer_name: interviewerName || interviewer,
         round,
         duration,
         meeting_link: meetingLink || null,
@@ -117,6 +125,8 @@ const createInterview = (req, res) => {
     const payload = normalizeInterviewPayload(req.body);
     const {
         candidate_id,
+        application_id,
+        job_id,
         candidate_name,
         email,
         phone,
@@ -125,6 +135,8 @@ const createInterview = (req, res) => {
         interview_time,
         mode,
         interviewer,
+        interviewer_id,
+        interviewer_name,
         round,
         duration,
         meeting_link,
@@ -133,10 +145,13 @@ const createInterview = (req, res) => {
 
     console.log("[Interview] Scheduling request received:", {
         candidate_id,
+        application_id,
+        job_id,
         candidate_name,
         interview_date,
         interview_time,
-        interviewer,
+        interviewer_id,
+        interviewer_name,
         round,
         mode,
         duration,
@@ -144,11 +159,27 @@ const createInterview = (req, res) => {
     });
 
     if (!candidate_id) {
-        return res.status(400).json({ message: "A valid candidate or application is required." });
+        return res.status(400).json({
+            success: false,
+            message: "A valid candidate or application is required.",
+            errorCode: "INVALID_CANDIDATE"
+        });
     }
 
-    if (!interviewer || !interview_date || !interview_time) {
-        return res.status(400).json({ message: "Interviewer, date, and time are required." });
+    if (!interviewer_id && !interviewer) {
+        return res.status(400).json({
+            success: false,
+            message: "A valid interviewer is required.",
+            errorCode: "INTERVIEWER_REQUIRED"
+        });
+    }
+
+    if (!interview_date || !interview_time) {
+        return res.status(400).json({
+            success: false,
+            message: "Interview date and time are required.",
+            errorCode: "INVALID_DATE_TIME"
+        });
     }
 
     // 1. Conflict detection for the assigned interviewer within the organization
@@ -167,33 +198,40 @@ const createInterview = (req, res) => {
         }
 
         if (conflicts && conflicts.length > 0) {
-            return res.status(400).json({
-                message: `Scheduling conflict: Interviewer ${interviewer} is already booked for another interview on ${interview_date} at ${interview_time}.`
+            return res.status(409).json({
+                success: false,
+                message: `Scheduling conflict: Interviewer ${interviewer} is already booked for another interview on ${interview_date} at ${interview_time}.`,
+                errorCode: "SCHEDULING_CONFLICT"
             });
         }
 
         // 2. Create interview record
         const insertSql = `
             INSERT INTO interviews (
-                candidate_id, candidate_name, email, phone, ai_score, 
-                interview_date, interview_time, mode, interviewer, 
+                candidate_id, application_id, job_id, candidate_name, email, phone, ai_score,
+                interview_date, interview_time, mode, interviewer, interviewer_id, interviewer_name,
                 round, duration, meeting_link, status, organization_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         db.query(
             insertSql,
             [
-                candidate_id, candidate_name, email, phone || "N/A", ai_score || 0,
-                interview_date, interview_time, mode, interviewer,
+                candidate_id, application_id || null, job_id || null, candidate_name, email, phone || "N/A", ai_score || 0,
+                interview_date, interview_time, mode, interviewer, interviewer_id || null, interviewer_name || interviewer,
                 round || "Technical Interview", duration || 30, meeting_link || null, status, orgId
             ],
             (err, result) => {
                 if (err) {
-                    console.error("Failed to create interview record:", err);
+                    console.error("[Interview Creation Error]", {
+                        message: err.message,
+                        name: err.name,
+                        stack: err.stack
+                    });
                     return res.status(500).json({
                         success: false,
                         message: "Interview Creation Failed",
+                        errorCode: "DATABASE_INSERT_FAILED",
                         error: process.env.NODE_ENV === "development" ? err.message : undefined
                     });
                 }
