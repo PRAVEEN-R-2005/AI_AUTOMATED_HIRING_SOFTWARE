@@ -19,7 +19,11 @@ import {
   FaClock,
   FaSearch,
   FaFileAlt,
-  FaArrowRight
+  FaArrowRight,
+  FaTimesCircle,
+  FaCheck,
+  FaTimes,
+  FaRegCircle
 } from "react-icons/fa";
 
 function AICandidates() {
@@ -40,6 +44,8 @@ function AICandidates() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [failedStep, setFailedStep] = useState(0);
 
   // Load requisitions & applications
   const loadData = async () => {
@@ -117,21 +123,47 @@ function AICandidates() {
     }
   };
 
+  // Helper step status indicator
+  const renderStepStatus = (stepIndex) => {
+    if (analyzing) {
+      if (analysisStep > stepIndex) return <FaCheck className="text-success" size={13} />;
+      if (analysisStep === stepIndex) return <span className="spinner-border spinner-border-sm text-primary-light" role="status" style={{ width: "12px", height: "12px", borderRightColor: "transparent" }}></span>;
+      return <FaRegCircle className="text-muted opacity-40" size={13} />;
+    }
+    if (error) {
+      if (failedStep === stepIndex) return <FaTimes className="text-danger" size={13} />;
+      if (failedStep > stepIndex) return <FaCheck className="text-success" size={13} />;
+      return <FaRegCircle className="text-muted opacity-40" size={13} />;
+    }
+    return <FaRegCircle className="text-muted opacity-40" size={13} />;
+  };
+
   // Run AI analysis workflow
   const handleRunAnalysis = async () => {
+    setError(null);
+    setFailedStep(0);
+
     if (!selectedJobId) {
-      alert("Please select a target job opening.");
+      setError("Please select a target job opening.");
       return;
     }
 
     if (sourceMode === "upload" && !file) {
-      alert("Please upload a PDF resume file to screen.");
+      setError("Please upload a PDF resume file to screen.");
       return;
     }
 
-    if (sourceMode === "existing" && !selectedAppId) {
-      alert("Please select an applicant profile to evaluate.");
-      return;
+    if (sourceMode === "existing") {
+      if (!selectedAppId) {
+        setError("Please select an applicant profile to evaluate.");
+        return;
+      }
+      const selectedApp = applications.find(app => Number(app.id) === Number(selectedAppId));
+      if (!selectedApp || !selectedApp.resume_file || !selectedApp.resume_file.trim()) {
+        setError("Selected candidate has no uploaded resume file. Please upload a resume before screening.");
+        setFailedStep(0);
+        return;
+      }
     }
 
     setAnalyzing(true);
@@ -154,16 +186,18 @@ function AICandidates() {
         formData.append("jobId", selectedJobId);
         formData.append("resume_file", file);
 
-        response = await api.post("/api/ai/upload-run", formData);
+        response = await api.post("/api/ai/upload-run", formData, { timeout: 30000 });
       } else {
-        response = await api.put(`/api/ai/run/${selectedAppId}`);
+        response = await api.put(`/api/ai/run/${selectedAppId}`, {}, { timeout: 30000 });
       }
 
       setAnalysisResult(response.data);
       loadData(); // refresh list
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "AI resume screening failed. Verify that PDF is text-readable and database is running.");
+      const errorMessage = err.response?.data?.message || err.message || "AI resume screening failed. Verify that PDF is text-readable and database is running.";
+      setError(errorMessage);
+      setFailedStep(analysisStep);
     } finally {
       clearInterval(interval);
       setAnalyzing(false);
@@ -334,41 +368,78 @@ function AICandidates() {
                 <CardContent className="p-4 d-flex flex-column justify-content-center min-vh-50 text-center">
                   
                   {/* Step Loader during screening */}
-                  {analyzing && (
-                    <div className="d-flex flex-column align-items-center gap-3 py-5">
-                      <div className="spinner-border text-primary-light" role="status" style={{ width: "3.5rem", height: "3.5rem" }}>
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                      <h5 className="fw-bold mt-2 text-primary-light">Screening in progress...</h5>
-                      <div className="d-flex flex-column gap-1.5 text-muted align-items-start mt-2" style={{ fontSize: "0.9rem", width: "250px" }}>
-                        <div className="d-flex align-items-center gap-2">
-                          <span className={analysisStep >= 0 ? "text-success" : "text-muted"}>✓</span>
+                  {(analyzing || error) && (
+                    <div className="d-flex flex-column align-items-center gap-3 py-4">
+                      {analyzing ? (
+                        <div className="spinner-border text-primary-light" role="status" style={{ width: "3rem", height: "3rem" }}>
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                      ) : (
+                        <div className="d-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle" style={{ width: "3rem", height: "3rem" }}>
+                          <FaTimesCircle size={28} />
+                        </div>
+                      )}
+                      
+                      <h5 className={`fw-bold mt-2 ${analyzing ? "text-primary-light" : "text-danger"}`}>
+                        {analyzing ? "Screening in progress..." : "Screening failed"}
+                      </h5>
+                      
+                      <div className="d-flex flex-column gap-2 text-muted align-items-start mt-2 p-3 bg-dark bg-opacity-20 rounded border border-secondary border-opacity-10" style={{ fontSize: "0.9rem", width: "280px" }}>
+                        <div className="d-flex align-items-center gap-2.5 w-100">
+                          <span className="d-flex align-items-center justify-content-center" style={{ width: "16px" }}>
+                            {renderStepStatus(0)}
+                          </span>
                           <span>Reading PDF Buffer</span>
                         </div>
-                        <div className="d-flex align-items-center gap-2">
-                          <span className={analysisStep >= 1 ? "text-success" : "text-muted"}>
-                            {analysisStep < 1 ? "○" : "✓"}
+                        <div className="d-flex align-items-center gap-2.5 w-100">
+                          <span className="d-flex align-items-center justify-content-center" style={{ width: "16px" }}>
+                            {renderStepStatus(1)}
                           </span>
                           <span>Normalizing extracted text</span>
                         </div>
-                        <div className="d-flex align-items-center gap-2">
-                          <span className={analysisStep >= 2 ? "text-success" : "text-muted"}>
-                            {analysisStep < 2 ? "○" : "✓"}
+                        <div className="d-flex align-items-center gap-2.5 w-100">
+                          <span className="d-flex align-items-center justify-content-center" style={{ width: "16px" }}>
+                            {renderStepStatus(2)}
                           </span>
                           <span>Running cosine similarity matches</span>
                         </div>
-                        <div className="d-flex align-items-center gap-2">
-                          <span className={analysisStep >= 3 ? "text-success" : "text-muted"}>
-                            {analysisStep < 3 ? "○" : "✓"}
+                        <div className="d-flex align-items-center gap-2.5 w-100">
+                          <span className="d-flex align-items-center justify-content-center" style={{ width: "16px" }}>
+                            {renderStepStatus(3)}
                           </span>
                           <span>Compiling strengths list</span>
                         </div>
                       </div>
+
+                      {error && (
+                        <div className="d-flex flex-column align-items-center gap-2 mt-3 w-100" style={{ maxWidth: "340px" }}>
+                          <div className="alert alert-danger p-3 mb-0 text-start w-100" style={{ fontSize: "0.85rem", borderLeftWidth: "4px" }}>
+                            <div className="fw-semibold mb-1 text-danger">Error Details:</div>
+                            <div className="text-white opacity-85">{error}</div>
+                          </div>
+                          <div className="d-flex gap-2 w-100 justify-content-center mt-2">
+                            <button
+                              type="button"
+                              className="btn-custom btn-custom-destructive px-3 py-2"
+                              onClick={handleRunAnalysis}
+                            >
+                              Retry Screening
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-custom btn-custom-outline px-3 py-2"
+                              onClick={() => { setError(null); setFailedStep(0); }}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {/* Empty State before start */}
-                  {!analyzing && !analysisResult && (
+                  {!analyzing && !analysisResult && !error && (
                     <div className="py-5">
                       <EmptyState
                         title="Candidate Intelligence Portal"
