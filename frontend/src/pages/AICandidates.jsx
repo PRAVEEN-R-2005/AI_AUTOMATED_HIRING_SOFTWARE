@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
+import { useToast } from "../components/ui/Toast";
 import AppLayout from "../components/layout/AppLayout";
 import StatCard from "../components/ui/StatCard";
 import { Card, CardContent } from "../components/ui/Card";
@@ -27,6 +28,7 @@ import {
 } from "react-icons/fa";
 
 function AICandidates() {
+  const toast = useToast();
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,7 @@ function AICandidates() {
       if (droppedFile.type === "application/pdf") {
         setFile(droppedFile);
       } else {
-        alert("Only PDF resume files are supported by the parser.");
+        toast.warning("Only PDF resume files are supported by the parser.");
       }
     }
   };
@@ -118,7 +120,7 @@ function AICandidates() {
       if (selectedFile.type === "application/pdf") {
         setFile(selectedFile);
       } else {
-        alert("Only PDF resume files are supported by the parser.");
+        toast.warning("Only PDF resume files are supported by the parser.");
       }
     }
   };
@@ -237,7 +239,7 @@ function AICandidates() {
   };
 
   const getOverallFitValue = (app) => app.overallFit ?? app.match_score ?? app.overallScore ?? app.overall_fit ?? null;
-  const getRecommendationValue = (app) => app.recommendation || app.screeningRecommendation || "Under Review";
+  const getRecommendationValue = (app) => app.recommendation || (app.match_score !== null && app.match_score !== undefined ? (app.match_score >= 75 ? "Strong Match - Recommended" : app.match_score >= 50 ? "Potential Match" : "Review Required") : "Pending Analysis");
 
   // History list: applications with persisted AI screening results
   const recentAnalyses = applications

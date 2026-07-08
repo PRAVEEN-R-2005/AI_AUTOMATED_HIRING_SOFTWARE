@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../services/api";
+import { useToast } from "../components/ui/Toast";
 import AppLayout from "../components/layout/AppLayout";
 import StatCard from "../components/ui/StatCard";
 import { Card, CardContent } from "../components/ui/Card";
@@ -47,10 +48,12 @@ const MODE_OPTIONS = [
 
 function Interviews() {
   const location = useLocation();
+  const toast = useToast();
   const preselectedCandidate = location.state?.candidate || null;
 
   const [interviews, setInterviews] = useState([]);
   const [candidates, setCandidates] = useState([]);
+  const [interviewers, setInterviewers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
@@ -59,7 +62,7 @@ function Interviews() {
   const [formCandidateId, setFormCandidateId] = useState("");
   const [formRound, setFormRound] = useState("Technical Interview");
   const [formMode, setFormMode] = useState("Video Call");
-  const [formInterviewer, setFormInterviewer] = useState("HR Manager");
+  const [formInterviewer, setFormInterviewer] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formTime, setFormTime] = useState("");
   const [formDuration, setFormDuration] = useState("30");
@@ -79,12 +82,20 @@ function Interviews() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [ivsRes, appsRes] = await Promise.all([
+      const [ivsRes, appsRes, interviewersRes] = await Promise.all([
         api.get("/api/interviews/all"),
-        api.get("/api/applications/all")
+        api.get("/api/applications/all"),
+        api.get("/api/team/interviewers").catch(() => ({ data: [] }))
       ]);
       setInterviews(ivsRes.data || []);
       setCandidates(appsRes.data || []);
+      const fetchedInterviewers = interviewersRes.data || [];
+      setInterviewers(fetchedInterviewers);
+
+      // Pre-select first interviewer if available
+      if (fetchedInterviewers.length > 0 && !formInterviewer) {
+        setFormInterviewer(fetchedInterviewers[0].name);
+      }
 
       // Pre-select applicant context if passed
       if (preselectedCandidate) {
@@ -113,13 +124,35 @@ function Interviews() {
   // Create schedule workflow
   const handleScheduleInterview = async (e) => {
     e.preventDefault();
-    if (!formCandidateId || !formDate || !formTime || !formInterviewer) {
-      alert("Please fill in all scheduling form parameters.");
+    if (!formCandidateId) {
+      toast.warning("Please select a candidate requisition.");
+      return;
+    }
+    if (!formDate) {
+      toast.warning("Please select an interview date.");
+      return;
+    }
+    if (!formTime) {
+      toast.warning("Please select a start time.");
+      return;
+    }
+    if (!formInterviewer) {
+      toast.warning("Please select an interviewer.");
       return;
     }
 
     const app = candidates.find(c => Number(c.id) === Number(formCandidateId));
-    if (!app) return;
+    if (!app) {
+      toast.error("Selected candidate application was not found.");
+      return;
+    }
+
+    // Prevent past date scheduling
+    const selectedDate = new Date(formDate + "T" + formTime);
+    if (selectedDate < new Date()) {
+      toast.warning("Interview date and time cannot be in the past.");
+      return;
+    }
 
     setScheduling(true);
     try {
@@ -141,7 +174,7 @@ function Interviews() {
 
       console.log("[Interviews] Scheduling payload:", payload);
       await api.post("/api/interviews", payload);
-      alert("Interview scheduled successfully! Candidate status updated to 'Interview'.");
+      toast.success("Interview scheduled successfully! Candidate status updated to 'Interview'.");
       
       // Clear form
       setFormMeetingLink("");
@@ -151,8 +184,8 @@ function Interviews() {
       loadData();
     } catch (err) {
       console.error("[Interviews] Scheduling failed:", err);
-      const backendMessage = err.response?.data?.message || err.response?.data?.error || "Failed to schedule interview. Check scheduling conflicts.";
-      alert(backendMessage);
+      const backendMessage = err.response?.data?.message || err.response?.data?.error || "Failed to schedule interview. Please check for scheduling conflicts.";
+      toast.error(backendMessage);
     } finally {
       setScheduling(false);
     }
@@ -162,10 +195,11 @@ function Interviews() {
   const handleUpdateStatus = async (id, status) => {
     try {
       await api.put(`/api/interviews/status/${id}`, { status });
-      alert(`Interview status updated to ${status}`);
+      toast.success(`Interview status updated to ${status}`);
       loadData();
     } catch (err) {
-      alert("Failed to update interview status");
+      const msg = err.response?.data?.message || "Failed to update interview status";
+      toast.error(msg);
     }
   };
 
@@ -180,7 +214,7 @@ function Interviews() {
   const handleConfirmFeedback = async () => {
     if (!selectedIv) return;
     if (!feedbackText.trim()) {
-      alert("Please enter evaluation comments before completing the scorecard.");
+      toast.warning("Please enter evaluation comments before completing the scorecard.");
       return;
     }
 
@@ -190,11 +224,12 @@ function Interviews() {
         feedback: feedbackText.trim(),
         rating: parseInt(ratingVal, 10)
       });
-      alert("Scorecard and feedback evaluation logged successfully.");
+      toast.success("Scorecard and feedback evaluation logged successfully.");
       setFeedbackOpen(false);
       loadData();
     } catch (err) {
-      alert("Failed to submit feedback");
+      const msg = err.response?.data?.message || "Failed to submit feedback";
+      toast.error(msg);
     } finally {
       setSubmittingFeedback(false);
     }
@@ -350,12 +385,16 @@ function Interviews() {
                       <Select
                         value={formInterviewer}
                         onChange={(e) => setFormInterviewer(e.target.value)}
-                        options={[
-                          { value: "HR Manager", label: "HR Manager" },
-                          { value: "Technical Lead", label: "Technical Lead" },
-                          { value: "Engineering Director", label: "Engineering Director" },
-                          { value: "Product Lead", label: "Product Lead" }
-                        ]}
+                        options={
+                          interviewers.length > 0
+                            ? interviewers.map(iv => ({
+                                value: iv.name,
+                                label: `${iv.name} (${iv.role})`
+                              }))
+                            : [
+                                { value: "", label: "No interviewers available" }
+                              ]
+                        }
                       />
                     </div>
                   </div>
@@ -377,9 +416,10 @@ function Interviews() {
                     type="submit"
                     variant="primary"
                     loading={scheduling}
+                    disabled={scheduling}
                     className="w-100 py-2.5 mt-2 d-flex align-items-center justify-content-center gap-1.5"
                   >
-                    <FaCalendarAlt /> Book Schedule Slot
+                    <FaCalendarAlt /> {scheduling ? "Scheduling..." : "Book Schedule Slot"}
                   </Button>
                 </form>
 
@@ -447,7 +487,7 @@ function Interviews() {
                               <strong>Round:</strong> {iv.round || "Technical Interview"}
                             </div>
                             <div className="col-md-6">
-                              <strong>Interviewer:</strong> {iv.interviewer || "HR Manager"}
+                              <strong>Interviewer:</strong> {iv.interviewer || "Not assigned"}
                             </div>
                             <div className="col-md-6">
                               <strong>Schedule:</strong> {iv.interview_date ? new Date(iv.interview_date).toLocaleDateString() : "TBD"} at {iv.interview_time || "TBD"} ({iv.duration || 30} mins)

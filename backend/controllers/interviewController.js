@@ -85,7 +85,7 @@ const verifyInterviewAccess = (ivId, req, callback) => {
             // Check if user is the assigned interviewer (matching email or name)
             const interviewerEmail = email.toLowerCase();
             const assignedEmail = iv.interviewer ? iv.interviewer.toLowerCase() : "";
-            
+
             if (assignedEmail !== interviewerEmail) {
                 return callback(new Error("Access Denied: You are not the assigned interviewer for this session"));
             }

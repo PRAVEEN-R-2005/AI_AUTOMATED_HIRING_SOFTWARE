@@ -129,7 +129,7 @@ function Applications() {
     try {
       const res = await api.put(`/api/applications/status/${id}`, { status: targetStatus });
       alert(`Application updated: status set to ${targetStatus}`);
-      
+
       // Refresh lists
       const [appsRes, actRes] = await Promise.all([
         api.get("/api/applications/all"),
@@ -273,7 +273,7 @@ function Applications() {
   return (
     <AppLayout>
       <div className="container-fluid px-0 text-white text-start">
-        
+
         {/* HEADER */}
         <div className="mb-4">
           <h2 className="fw-bold mb-1" style={{ color: "var(--text-primary)" }}>Recruitment Pipeline</h2>
@@ -384,7 +384,7 @@ function Applications() {
         ) : error ? (
           <ErrorState title="Failed to load pipeline datasets" onRetry={loadData} />
         ) : viewMode === "kanban" ? (
-          
+
           /* KANBAN HORIZONTAL COLS */
           <div className="d-flex gap-3 overflow-x-auto pb-4" style={{ minHeight: "500px", scrollbarWidth: "thin" }}>
             {ATS_STAGES.map(stage => {
@@ -498,7 +498,7 @@ function Applications() {
             })}
           </div>
         ) : (
-          
+
           /* TABULAR INDEX VIEW */
           <Card className="surface-custom border-custom">
             <CardContent className="p-0">
@@ -570,7 +570,7 @@ function Applications() {
             }
           >
             <div className="d-flex flex-column gap-3 text-white text-start">
-              
+
               {/* Header profile info */}
               <div className="d-flex align-items-center gap-3">
                 <FaUserCircle size={56} className="text-secondary" />
