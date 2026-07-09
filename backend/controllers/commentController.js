@@ -34,8 +34,8 @@ const verifyResourceAccess = (resourceType, resourceId, req, callback) => {
                 callback(null);
             });
         } else if (role === "Interviewer") {
-            const checkInterview = "SELECT id FROM interviews WHERE candidate_id = ? AND interviewer = ? AND organization_id = ?";
-            db.query(checkInterview, [resourceId, email, organization_id], (ivErr, ivs) => {
+            const checkInterview = "SELECT id FROM interviews WHERE (candidate_id = ? OR application_id = ?) AND interviewer = ? AND organization_id = ?";
+            db.query(checkInterview, [resourceId, resourceId, email, organization_id], (ivErr, ivs) => {
                 if (ivErr || !ivs || ivs.length === 0) {
                     return callback(new Error("Access Denied: You do not have scheduled interviews with this candidate"));
                 }

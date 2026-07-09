@@ -20,7 +20,7 @@ const getCandidateScope = (req) => {
     } else if (role === "Interviewer") {
         whereClause += `
             AND a.id IN (
-                SELECT candidate_id FROM interviews 
+                SELECT COALESCE(application_id, candidate_id) FROM interviews 
                 WHERE organization_id = ? AND interviewer = ?
             )
         `;
@@ -87,8 +87,8 @@ const getCandidateById = (req, res) => {
             });
         } else if (role === "Interviewer") {
             // Check if there is an interview scheduled with this interviewer for this candidate
-            const interviewCheck = "SELECT id FROM interviews WHERE candidate_id = ? AND interviewer = ? AND organization_id = ?";
-            db.query(interviewCheck, [id, email, organization_id], (checkErr, checkRows) => {
+            const interviewCheck = "SELECT id FROM interviews WHERE (candidate_id = ? OR application_id = ?) AND interviewer = ? AND organization_id = ?";
+            db.query(interviewCheck, [id, id, email, organization_id], (checkErr, checkRows) => {
                 if (checkErr || !checkRows || checkRows.length === 0) {
                     return res.status(403).json({ message: "Access Denied: You do not have scheduled interviews with this candidate" });
                 }

@@ -31,15 +31,15 @@ const verifyAppAccess = (appId, req, callback) => {
 
         if (role === "Hiring Manager") {
             const checkAssign = "SELECT id FROM job_assignments WHERE job_id = ? AND user_id = ? AND assigned_role = 'Hiring Manager'";
-            db.query(checkAssign, [app.job_id, userId], (assignErr, assigns) => {
+                db.query(checkAssign, [app.job_id, userId], (assignErr, assigns) => {
                 if (assignErr || !assigns || assigns.length === 0) {
                     return callback(new Error("Access Denied: You are not assigned to this job"));
                 }
                 callback(null, app);
             });
         } else if (role === "Interviewer") {
-            const checkInterview = "SELECT id FROM interviews WHERE candidate_id = ? AND interviewer = ? AND organization_id = ?";
-            db.query(checkInterview, [appId, email, organization_id], (ivErr, ivs) => {
+            const checkInterview = "SELECT id FROM interviews WHERE (candidate_id = ? OR application_id = ?) AND interviewer = ? AND organization_id = ?";
+            db.query(checkInterview, [appId, appId, email, organization_id], (ivErr, ivs) => {
                 if (ivErr || !ivs || ivs.length === 0) {
                     return callback(new Error("Access Denied: You do not have scheduled interviews with this candidate"));
                 }
@@ -183,7 +183,7 @@ const getApplications = (req, res) => {
             SELECT a.*, j.title AS job_title 
             FROM applications a
             LEFT JOIN job_descriptions j ON a.job_id = j.jd_id
-            INNER JOIN interviews iv ON a.id = iv.candidate_id
+            INNER JOIN interviews iv ON COALESCE(iv.application_id, iv.candidate_id) = a.id
             WHERE a.organization_id = ? AND iv.interviewer = ?
             ORDER BY a.id DESC
         `;

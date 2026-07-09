@@ -3,7 +3,7 @@ const db = require("../config/db");
 const { notifyRecruiters, createNotification } = require("../utils/notifier");
 
 const normalizeInterviewPayload = (body = {}) => {
-    const candidateId = Number(body.candidate_id ?? body.candidateId ?? body.application_id ?? body.applicationId ?? body.id ?? 0);
+    const candidateId = Number(body.candidate_id ?? body.candidateId ?? body.id ?? 0);
     const applicationId = Number(body.application_id ?? body.applicationId ?? body.application ?? body.id ?? 0);
     const jobId = Number(body.job_id ?? body.jobId ?? body.jobRequisitionId ?? body.job_requisition_id ?? 0);
     const candidateName = body.candidate_name ?? body.candidateName ?? body.name ?? "";
@@ -101,13 +101,14 @@ const verifyInterviewAccess = (ivId, req, callback) => {
         }
 
         if (role === "Hiring Manager") {
-            // Check if assigned to the candidate's job
+            // Check if assigned to the candidate's job — support both application_id and candidate_id
+            const resourceAppId = iv.application_id || iv.candidate_id || null;
             const checkAssign = `
                 SELECT ja.id FROM job_assignments ja
                 INNER JOIN applications a ON ja.job_id = a.job_id
                 WHERE a.id = ? AND ja.user_id = ? AND ja.assigned_role = 'Hiring Manager'
             `;
-            db.query(checkAssign, [iv.candidate_id, req.user.id], (checkErr, assigns) => {
+            db.query(checkAssign, [resourceAppId, req.user.id], (checkErr, assigns) => {
                 if (checkErr || !assigns || assigns.length === 0) {
                     return callback(new Error("Access Denied: You are not assigned to this job requisition"));
                 }
@@ -158,7 +159,7 @@ const createInterview = (req, res) => {
         organization_id: orgId
     });
 
-    if (!candidate_id) {
+    if (!candidate_id && !application_id) {
         return res.status(400).json({
             success: false,
             message: "A valid candidate or application is required.",
@@ -214,80 +215,99 @@ const createInterview = (req, res) => {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
-        db.query(
-            insertSql,
-            [
-                candidate_id, application_id || null, job_id || null, candidate_name, email, phone || "N/A", ai_score || 0,
-                interview_date, interview_time, mode, interviewer, interviewer_id || null, interviewer_name || interviewer,
-                round || "Technical Interview", duration || 30, meeting_link || null, status, orgId
-            ],
-            (err, result) => {
-                if (err) {
-                    console.error("[Interview Creation Error]", {
-                        message: err.message,
-                        name: err.name,
-                        stack: err.stack
-                    });
-                    return res.status(500).json({
-                        success: false,
-                        message: "Interview Creation Failed",
-                        errorCode: "DATABASE_INSERT_FAILED",
-                        error: process.env.NODE_ENV === "development" ? err.message : undefined
+        // Ensure candidate_id satisfies FK constraint to ai_candidates. If not present,
+        // null it out and rely on application_id for linking to `applications`.
+        const ensureCandidateFk = (cb) => {
+            if (!candidate_id) return cb(null, null);
+            db.query("SELECT id FROM ai_candidates WHERE id = ?", [candidate_id], (fkErr, rows) => {
+                if (fkErr) {
+                    console.error("Failed to validate ai_candidates FK:", fkErr);
+                    return cb(null, null);
+                }
+                if (!rows || rows.length === 0) return cb(null, null);
+                cb(null, candidate_id);
+            });
+        };
+
+        ensureCandidateFk((fkErr, candidateDbId) => {
+            db.query(
+                insertSql,
+                [
+                    candidateDbId, application_id || null, job_id || null, candidate_name, email, phone || "N/A", ai_score || 0,
+                    interview_date, interview_time, mode, interviewer, interviewer_id || null, interviewer_name || interviewer,
+                    round || "Technical Interview", duration || 30, meeting_link || null, status, orgId
+                ],
+                (err, result) => {
+                    if (err) {
+                        console.error("[Interview Creation Error]", {
+                            message: err.message,
+                            name: err.name,
+                            stack: err.stack
+                        });
+                        return res.status(500).json({
+                            success: false,
+                            message: "Interview Creation Failed",
+                            errorCode: "DATABASE_INSERT_FAILED",
+                            error: process.env.NODE_ENV === "development" ? err.message : undefined
+                        });
+                    }
+
+                    const interviewId = result.insertId;
+
+                    // 3. Log scheduling activity
+                    const detailText = `Scheduled ${round || 'Technical Interview'} with ${interviewer} on ${interview_date} at ${interview_time}`;
+                    const activityAppId = application_id || candidateDbId || null;
+                    db.query(
+                        "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Interview Scheduled', ?, ?)",
+                        [activityAppId, candidate_name, detailText, orgId],
+                        (actErr) => {
+                            if (actErr) console.error("Failed to log interview schedule activity:", actErr);
+                        }
+                    );
+
+                    // 4. Progress candidate status to Interview stage in applications (if we have an application_id)
+                    if (application_id) {
+                        db.query(
+                            "UPDATE applications SET status = 'Interview' WHERE id = ? AND organization_id = ?",
+                            [application_id, orgId],
+                            (statusErr) => {
+                                if (statusErr) {
+                                    console.error("Failed to progress status to Interview stage:", statusErr);
+                                } else {
+                                    db.query(
+                                        "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Stage Transition', 'Moved to Interview stage (Interview scheduled)', ?)",
+                                        [application_id, candidate_name, orgId],
+                                        (transErr) => {
+                                            if (transErr) console.error("Failed to log transition activity:", transErr);
+                                        }
+                                    );
+                                }
+                            }
+                        );
+                    }
+
+                    // Log Notifications
+                    notifyRecruiters(
+                        "INTERVIEW_SCHEDULED",
+                        "HIGH",
+                        "New Interview Scheduled",
+                        `Scheduled ${round || 'Technical Interview'} for ${candidate_name} with ${interviewer} on ${interview_date}`
+                    );
+                    createNotification(
+                        email,
+                        "INTERVIEW_SCHEDULED",
+                        "HIGH",
+                        "Interview Scheduled",
+                        `Your interview round ${round || 'Technical Interview'} is scheduled on ${interview_date} at ${interview_time}`
+                    );
+
+                    res.status(201).json({
+                        message: "Interview Scheduled Successfully",
+                        interviewId
                     });
                 }
-
-                const interviewId = result.insertId;
-
-                // 3. Log scheduling activity
-                const detailText = `Scheduled ${round || 'Technical Interview'} with ${interviewer} on ${interview_date} at ${interview_time}`;
-                db.query(
-                    "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Interview Scheduled', ?, ?)",
-                    [candidate_id, candidate_name, detailText, orgId],
-                    (actErr) => {
-                        if (actErr) console.error("Failed to log interview schedule activity:", actErr);
-                    }
-                );
-
-                // 4. Progress candidate status to Interview stage in applications
-                db.query(
-                    "UPDATE applications SET status = 'Interview' WHERE id = ? AND organization_id = ?",
-                    [candidate_id, orgId],
-                    (statusErr) => {
-                        if (statusErr) {
-                            console.error("Failed to progress status to Interview stage:", statusErr);
-                        } else {
-                            db.query(
-                                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Stage Transition', 'Moved to Interview stage (Interview scheduled)', ?)",
-                                [candidate_id, candidate_name, orgId],
-                                (transErr) => {
-                                    if (transErr) console.error("Failed to log transition activity:", transErr);
-                                }
-                            );
-                        }
-                    }
-                );
-
-                // Log Notifications
-                notifyRecruiters(
-                    "INTERVIEW_SCHEDULED",
-                    "HIGH",
-                    "New Interview Scheduled",
-                    `Scheduled ${round || 'Technical Interview'} for ${candidate_name} with ${interviewer} on ${interview_date}`
-                );
-                createNotification(
-                    email,
-                    "INTERVIEW_SCHEDULED",
-                    "HIGH",
-                    "Interview Scheduled",
-                    `Your interview round ${round || 'Technical Interview'} is scheduled on ${interview_date} at ${interview_time}`
-                );
-
-                res.status(201).json({
-                    message: "Interview Scheduled Successfully",
-                    interviewId
-                });
-            }
-        );
+            );
+        });
     });
 };
 
@@ -303,7 +323,7 @@ const getAllInterviews = (req, res) => {
     } else if (role === "Hiring Manager") {
         sql = `
             SELECT iv.* FROM interviews iv
-            INNER JOIN applications a ON iv.candidate_id = a.id
+            INNER JOIN applications a ON COALESCE(iv.application_id, iv.candidate_id) = a.id
             INNER JOIN job_assignments ja ON a.job_id = ja.job_id
             WHERE iv.organization_id = ? AND ja.user_id = ? AND ja.assigned_role = 'Hiring Manager'
             ORDER BY iv.id DESC
@@ -340,9 +360,10 @@ const updateInterviewStatus = (req, res) => {
 
             // Log update activity
             const detailText = `Interview status set to ${status}`;
+            const updateActivityAppId = iv.application_id || iv.candidate_id || null;
             db.query(
                 "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Interview Updated', ?, ?)",
-                [iv.candidate_id, iv.candidate_name, detailText, req.user.organization_id],
+                [updateActivityAppId, iv.candidate_name, detailText, req.user.organization_id],
                 (actErr) => {
                     if (actErr) console.error("Failed to insert update activity:", actErr);
                 }
@@ -396,9 +417,10 @@ const submitFeedback = (req, res) => {
 
             // Log feedback activity
             const detailText = `Submitted evaluation feedback for ${iv.round} (Rating: ${rating}/5)`;
+            const feedbackActivityAppId = iv.application_id || iv.candidate_id || null;
             db.query(
                 "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, 'Interview Evaluation', ?, ?)",
-                [iv.candidate_id, iv.candidate_name, detailText, req.user.organization_id],
+                [feedbackActivityAppId, iv.candidate_name, detailText, req.user.organization_id],
                 (actErr) => {
                     if (actErr) console.error("Failed to insert feedback activity:", actErr);
                 }
