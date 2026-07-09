@@ -2,6 +2,18 @@ require("dotenv").config();
 const mysql = require("mysql2");
 const bcrypt = require("bcryptjs");
 
+const isProduction = process.env.NODE_ENV === "production";
+
+// Validate production configuration
+if (isProduction) {
+    const hasConnectionUrl = !!(process.env.DATABASE_URL || process.env.MYSQL_URL || process.env.MYSQLURL);
+    const hasIndividualParams = !!(process.env.DB_HOST && process.env.DB_USER && process.env.DB_NAME);
+    if (!hasConnectionUrl && !hasIndividualParams) {
+        console.error("FATAL ERROR: Production database configuration is missing. Set DATABASE_URL or the required DB_* environment variables.");
+        process.exit(1);
+    }
+}
+
 const connectionUrl = process.env.DATABASE_URL || process.env.MYSQL_URL || process.env.MYSQLURL;
 
 const useSSL = process.env.DB_SSL === "true" || 
@@ -13,51 +25,72 @@ const useSSL = process.env.DB_SSL === "true" ||
                 ));
 const sslOptions = useSSL ? { ssl: { rejectUnauthorized: true } } : {};
 
+const shouldSeedDemo = process.env.SEED_DEMO_DATA === "true" || (!isProduction && process.env.SEED_DEMO_DATA !== "false");
+
 let dbConfig;
 let databaseName = process.env.DB_NAME || "hr_hiring_system";
 let initConfig;
 
 if (connectionUrl) {
     dbConfig = connectionUrl;
-    initConfig = connectionUrl;
     try {
         const parsedUrl = new URL(connectionUrl);
-        const pathname = parsedUrl.pathname.replace("/", "");
+        const pathname = parsedUrl.pathname.replace(/^\/+/, "");
         if (pathname) {
-            databaseName = pathname;
+            databaseName = pathname.split("?")[0];
         }
-        // Build initialization config without a database name to connect to the server first
+        // Build initialization config with database name in production to connect directly
         initConfig = {
             host: parsedUrl.hostname,
-            user: parsedUrl.username,
+            user: decodeURIComponent(parsedUrl.username),
             password: decodeURIComponent(parsedUrl.password),
             port: parsedUrl.port ? parseInt(parsedUrl.port) : 3306,
+            database: databaseName,
             ...sslOptions
         };
+        // For local development, remove database from initConfig so it can check/create first
+        if (!isProduction) {
+            delete initConfig.database;
+        }
     } catch (e) {
         console.warn("Warning: Could not parse database connection URL for initialization, using connectionUrl directly:", e.message);
+        initConfig = connectionUrl;
     }
 } else {
     dbConfig = {
-        host: process.env.DB_HOST || "localhost",
-        user: process.env.DB_USER || "root",
-        password: process.env.DB_PASSWORD || "",
+        host: process.env.DB_HOST || (isProduction ? undefined : "localhost"),
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
         port: process.env.DB_PORT || 3306,
+        database: databaseName,
         ...sslOptions
     };
     initConfig = process.env.DB_SOCKET_PATH
         ? {
             socketPath: process.env.DB_SOCKET_PATH,
-            user: process.env.DB_USER || "root",
-            password: process.env.DB_PASSWORD || "",
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
           }
         : dbConfig;
+        
+    // Local TCP configuration: if not using sockets, remove database for initial verification
+    if (!isProduction && !process.env.DB_SOCKET_PATH) {
+        initConfig = {
+            host: dbConfig.host,
+            user: dbConfig.user,
+            password: dbConfig.password,
+            port: dbConfig.port,
+            ...sslOptions
+        };
+    }
 }
 
 // Initialize database initialization promise
 let resolveInit;
-const initPromise = new Promise((resolve) => {
+let rejectInit;
+const initPromise = new Promise((resolve, reject) => {
     resolveInit = resolve;
+    rejectInit = reject;
 });
 
 // Connect to MySQL server first to verify/create database and tables
@@ -65,25 +98,16 @@ const initConnection = mysql.createConnection(initConfig);
 
 initConnection.connect((err) => {
     if (err) {
-        console.error("MySQL Server Connection Failed (Initialization):", err.message);
+        console.error("FATAL ERROR: MySQL Server Connection Failed (Initialization):", err.message);
+        if (isProduction) {
+            process.exit(1);
+        }
         resolveInit();
         return;
     }
 
-    const dbName = databaseName;
-    initConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``, (err) => {
-        if (err) {
-            console.warn("Warning: Failed to create database (might already exist or lack privileges):", err.message);
-        }
-
-        initConnection.query(`USE \`${dbName}\``, async (err) => {
-            if (err) {
-                console.error("Failed to select database:", err.message);
-                initConnection.end();
-                resolveInit();
-                return;
-            }
-
+    const runSchemaSetup = async () => {
+        try {
             // Create all required tables
             const tables = [
                 `CREATE TABLE IF NOT EXISTS users (
@@ -450,170 +474,193 @@ initConnection.connect((err) => {
             });
 
             // Seed default demo users and their organization memberships if users table is empty
-            initConnection.query("SELECT COUNT(*) as count FROM users", async (err, results) => {
-                if (!err && results && results[0].count === 0) {
-                    console.log("Seeding default demo users...");
-                    const demoUsers = [
-                        { name: "Admin User", email: "admin@gmail.com", password: "admin123", role: "Admin", orgRole: "Admin" },
-                        { name: "HR Manager", email: "hr@gmail.com", password: "123456", role: "HR", orgRole: "Recruiter" },
-                        { name: "Candidate User", email: "candidate@gmail.com", password: "123456", role: "Candidate", orgRole: null }
-                    ];
+            if (shouldSeedDemo) {
+                initConnection.query("SELECT COUNT(*) as count FROM users", async (err, results) => {
+                    if (!err && results && results[0].count === 0) {
+                        console.log("Seeding default demo users...");
+                        const demoUsers = [
+                            { name: "Admin User", email: "admin@gmail.com", password: "admin123", role: "Admin", orgRole: "Admin" },
+                            { name: "HR Manager", email: "hr@gmail.com", password: "123456", role: "HR", orgRole: "Recruiter" },
+                            { name: "Candidate User", email: "candidate@gmail.com", password: "123456", role: "Candidate", orgRole: null }
+                        ];
 
-                    for (const user of demoUsers) {
-                        const hashedPassword = await bcrypt.hash(user.password, 10);
-                        initConnection.query(
-                            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-                            [user.name, user.email, hashedPassword, user.role],
-                            (insErr, insRes) => {
-                                if (!insErr && insRes && user.orgRole) {
-                                    const userId = insRes.insertId;
-                                    initConnection.query(
-                                        "INSERT IGNORE INTO memberships (user_id, organization_id, role, status) VALUES (?, 1, ?, 'ACTIVE')",
-                                        [userId, user.orgRole]
-                                    );
+                        for (const user of demoUsers) {
+                            const hashedPassword = await bcrypt.hash(user.password, 10);
+                            initConnection.query(
+                                "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+                                [user.name, user.email, hashedPassword, user.role],
+                                (insErr, insRes) => {
+                                    if (!insErr && insRes && user.orgRole) {
+                                        const userId = insRes.insertId;
+                                        initConnection.query(
+                                            "INSERT IGNORE INTO memberships (user_id, organization_id, role, status) VALUES (?, 1, ?, 'ACTIVE')",
+                                            [userId, user.orgRole]
+                                        );
+                                    }
+                                }
+                            );
+                        }
+                    } else {
+                        // Backfill memberships for existing database users if they do not have them
+                        initConnection.query("SELECT id, email, role FROM users", (err, usersList) => {
+                            if (!err && usersList) {
+                                for (const u of usersList) {
+                                    let orgRole = null;
+                                    if (u.email === "admin@gmail.com") orgRole = "Admin";
+                                    else if (u.email === "hr@gmail.com") orgRole = "Recruiter";
+                                    else if (u.role === "Admin") orgRole = "Admin";
+                                    else if (u.role === "HR") orgRole = "Recruiter";
+
+                                    if (orgRole) {
+                                        initConnection.query(
+                                            "INSERT IGNORE INTO memberships (user_id, organization_id, role, status) VALUES (?, 1, ?, 'ACTIVE')",
+                                            [u.id, orgRole]
+                                        );
+                                    }
                                 }
                             }
-                        );
+                        });
                     }
-                } else {
-                    // Backfill memberships for existing database users if they do not have them
-                    initConnection.query("SELECT id, email, role FROM users", (err, usersList) => {
-                        if (!err && usersList) {
-                            for (const u of usersList) {
-                                let orgRole = null;
-                                if (u.email === "admin@gmail.com") orgRole = "Admin";
-                                else if (u.email === "hr@gmail.com") orgRole = "Recruiter";
-                                else if (u.role === "Admin") orgRole = "Admin";
-                                else if (u.role === "HR") orgRole = "Recruiter";
+                });
+            } else {
+                initConnection.query("SELECT id, email, role FROM users", (err, usersList) => {
+                    if (!err && usersList) {
+                        for (const u of usersList) {
+                            let orgRole = null;
+                            if (u.email === "admin@gmail.com") orgRole = "Admin";
+                            else if (u.email === "hr@gmail.com") orgRole = "Recruiter";
+                            else if (u.role === "Admin") orgRole = "Admin";
+                            else if (u.role === "HR") orgRole = "Recruiter";
 
-                                if (orgRole) {
-                                    initConnection.query(
-                                        "INSERT IGNORE INTO memberships (user_id, organization_id, role, status) VALUES (?, 1, ?, 'ACTIVE')",
-                                        [u.id, orgRole]
-                                    );
-                                }
+                            if (orgRole) {
+                                initConnection.query(
+                                    "INSERT IGNORE INTO memberships (user_id, organization_id, role, status) VALUES (?, 1, ?, 'ACTIVE')",
+                                    [u.id, orgRole]
+                                );
                             }
                         }
-                    });
-                }
-            });
+                    }
+                });
+            }
 
             // Seeding default demo job descriptions and candidate applications if empty
-            initConnection.query("SELECT COUNT(*) as count FROM job_descriptions", async (jdErr, jdCountRes) => {
-                if (!jdErr && jdCountRes && jdCountRes[0].count === 0) {
-                    console.log("Seeding default demo job descriptions, candidates, applications, interviews, activities, notifications, and comments...");
+            if (shouldSeedDemo) {
+                initConnection.query("SELECT COUNT(*) as count FROM job_descriptions", async (jdErr, jdCountRes) => {
+                    if (!jdErr && jdCountRes && jdCountRes[0].count === 0) {
+                        console.log("Seeding default demo job descriptions, candidates, applications, interviews, activities, notifications, and comments...");
+                        const jds = [
+                            [1, "Senior Full-Stack Engineer", "React, Node.js, SQL", "5+ years", "$120,000 - $150,000", "Remote / Hybrid", "Join our core platform engineering team to build scalable full-stack web applications. You will collaborate on architectural design, implement modular APIs, and maintain high code quality standards.", "hr@gmail.com", "Active", 1],
+                            [2, "Machine Learning Scientist", "Python, PyTorch, Transformers", "3+ years", "$140,000 - $180,000", "San Francisco, CA (Onsite)", "Design and train deep learning models for NLP and information retrieval systems. Work directly with product groups to deploy advanced transformer models to production.", "hr@gmail.com", "Active", 1]
+                        ];
+                        for (const jd of jds) {
+                            await new Promise((resolve) => {
+                                initConnection.query(
+                                    `INSERT INTO job_descriptions 
+                                    (jd_id, title, skills, experience, salary, location, description, created_by, status, organization_id) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                    jd,
+                                    () => resolve()
+                                );
+                            });
+                        }
 
-                    // 1. Seed open Job Postings
-                    const jds = [
-                        [1, "Senior Full-Stack Engineer", "React, Node.js, SQL, REST APIs", "5-8 Years", "$120,000 - $150,000", "Remote", "Design and build scalable microservice architectures and interactive frontend web platforms.", "hr@gmail.com", "Active", 1],
-                        [2, "AI Research Specialist", "Python, PyTorch, Transformers, NLP", "3-5 Years", "$140,000 - $180,000", "Hybrid (San Francisco, CA)", "Develop, optimize, and fine-tune natural language modeling systems and deep learning algorithms.", "hr@gmail.com", "Active", 1]
-                    ];
-                    for (const jd of jds) {
-                        await new Promise((resolve) => {
-                            initConnection.query(
-                                "INSERT INTO job_descriptions (jd_id, title, skills, experience, salary, location, description, created_by, status, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                jd,
-                                () => resolve()
-                            );
-                        });
-                    }
+                        // 2. Seed Candidates
+                        const candidates = [
+                            [1, "John Smith", "john.smith@example.com", "john_smith_resume.pdf"],
+                            [2, "Sarah Connor", "sarah.connor@example.com", "sarah_connor_resume.pdf"],
+                            [3, "David Miller", "david.miller@example.com", "david_miller_resume.pdf"]
+                        ];
+                        for (const c of candidates) {
+                            await new Promise((resolve) => {
+                                initConnection.query(
+                                    "INSERT INTO candidates (id, name, email, resume) VALUES (?, ?, ?, ?)",
+                                    c,
+                                    () => resolve()
+                                );
+                            });
+                        }
 
-                    // 2. Seed Candidates
-                    const candidates = [
-                        [1, "John Smith", "john.smith@example.com", "john_smith_resume.pdf"],
-                        [2, "Sarah Connor", "sarah.connor@example.com", "sarah_connor_resume.pdf"],
-                        [3, "David Miller", "david.miller@example.com", "david_miller_resume.pdf"]
-                    ];
-                    for (const c of candidates) {
-                        await new Promise((resolve) => {
-                            initConnection.query(
-                                "INSERT INTO candidates (id, name, email, resume) VALUES (?, ?, ?, ?)",
-                                c,
-                                () => resolve()
-                            );
-                        });
-                    }
+                        // 3. Seed Applications with structured AI Screen details
+                        const apps = [
+                            [1, "John Smith", "john.smith@example.com", "555-0100", 1, "john_smith_resume.pdf", "Shortlisted", 85, 90, 80, 85, "React, Node.js, SQL", "AWS", "Docker, CSS", "Excellent full stack engineer candidate.", "Ask about database pool connection pool scaling.", "Strong technical candidate with SQL tuning experience.", "Strong Fit", 1],
+                            [2, "Sarah Connor", "sarah.connor@example.com", "555-0199", 2, "sarah_connor_resume.pdf", "Interview", 92, 95, 90, 90, "Python, PyTorch, Transformers", "Docker", "Git, LaTeX", "Excellent deep learning experience and publications.", "Inquire about transformers fine-tuning.", "Top-tier candidate for the research division.", "Top Tier", 1],
+                            [3, "David Miller", "david.miller@example.com", "555-0122", 1, "david_miller_resume.pdf", "Pending", 45, 50, 40, 45, "React", "Node.js, SQL", "HTML, CSS, JavaScript", "Clean interface design principles.", "Lacks backend microservices database architecture.", "Weak full-stack experience.", "Weak Fit", 1]
+                        ];
+                        for (const app of apps) {
+                            await new Promise((resolve) => {
+                                initConnection.query(
+                                    `INSERT INTO applications 
+                                    (id, candidate_name, email, phone, job_id, resume_file, status, match_score, skills_score, experience_score, education_score, matched_skills, missing_skills, additional_skills, candidate_strengths, review_considerations, ai_summary, recommendation, organization_id) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                    app,
+                                    () => resolve()
+                                );
+                            });
+                        }
 
-                    // 3. Seed Applications with structured AI Screen details
-                    const apps = [
-                        [1, "John Smith", "john.smith@example.com", "555-0100", 1, "john_smith_resume.pdf", "Shortlisted", 85, 90, 80, 85, "React, Node.js, SQL", "AWS", "Docker, CSS", "Excellent full stack engineer candidate.", "Ask about database pool connection pool scaling.", "Strong technical candidate with SQL tuning experience.", "Strong Fit", 1],
-                        [2, "Sarah Connor", "sarah.connor@example.com", "555-0199", 2, "sarah_connor_resume.pdf", "Interview", 92, 95, 90, 90, "Python, PyTorch, Transformers", "Docker", "Git, LaTeX", "Excellent deep learning experience and publications.", "Inquire about transformers fine-tuning.", "Top-tier candidate for the research division.", "Top Tier", 1],
-                        [3, "David Miller", "david.miller@example.com", "555-0122", 1, "david_miller_resume.pdf", "Pending", 45, 50, 40, 45, "React", "Node.js, SQL", "HTML, CSS, JavaScript", "Clean interface design principles.", "Lacks backend microservices database architecture.", "Weak full-stack experience.", "Weak Fit", 1]
-                    ];
-                    for (const app of apps) {
-                        await new Promise((resolve) => {
-                            initConnection.query(
-                                `INSERT INTO applications 
-                                (id, candidate_name, email, phone, job_id, resume_file, status, match_score, skills_score, experience_score, education_score, matched_skills, missing_skills, additional_skills, candidate_strengths, review_considerations, ai_summary, recommendation, organization_id) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                                app,
-                                () => resolve()
-                            );
-                        });
-                    }
+                        // 4. Seed Interviews
+                        const interviews = [
+                            [2, "Sarah Connor", "sarah.connor@example.com", "555-0199", 92, "2026-07-15", "10:00 AM", "Video", "HR Manager", "Scheduled", "Technical Interview", 45, "https://meet.google.com/abc-defg-hij", 1]
+                        ];
+                        for (const iv of interviews) {
+                            await new Promise((resolve) => {
+                                initConnection.query(
+                                    `INSERT INTO interviews 
+                                    (candidate_id, candidate_name, email, phone, ai_score, interview_date, interview_time, mode, interviewer, status, round, duration, meeting_link, organization_id) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                    iv,
+                                    () => resolve()
+                                );
+                            });
+                        }
 
-                    // 4. Seed Interviews
-                    const interviews = [
-                        [2, "Sarah Connor", "sarah.connor@example.com", "555-0199", 92, "2026-07-15", "10:00 AM", "Video", "HR Manager", "Scheduled", "Technical Interview", 45, "https://meet.google.com/abc-defg-hij", 1]
-                    ];
-                    for (const iv of interviews) {
-                        await new Promise((resolve) => {
-                            initConnection.query(
-                                `INSERT INTO interviews 
-                                (candidate_id, candidate_name, email, phone, ai_score, interview_date, interview_time, mode, interviewer, status, round, duration, meeting_link, organization_id) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                                iv,
-                                () => resolve()
-                            );
-                        });
-                    }
+                        // 5. Seed Activities
+                        const activities = [
+                            [1, "John Smith", "STAGE_CHANGE", "Candidate moved from Applied to Shortlisted.", 1],
+                            [2, "Sarah Connor", "STAGE_CHANGE", "Candidate moved from Applied to Interview.", 1],
+                            [3, "David Miller", "APPLICATION_SUBMITTED", "Applied to Senior Full-Stack Engineer.", 1]
+                        ];
+                        for (const act of activities) {
+                            await new Promise((resolve) => {
+                                initConnection.query(
+                                    "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, ?, ?, ?)",
+                                    act,
+                                    () => resolve()
+                                );
+                            });
+                        }
 
-                    // 5. Seed Activities
-                    const activities = [
-                        [1, "John Smith", "STAGE_CHANGE", "Candidate moved from Applied to Shortlisted.", 1],
-                        [2, "Sarah Connor", "STAGE_CHANGE", "Candidate moved from Applied to Interview.", 1],
-                        [3, "David Miller", "APPLICATION_SUBMITTED", "Applied to Senior Full-Stack Engineer.", 1]
-                    ];
-                    for (const act of activities) {
-                        await new Promise((resolve) => {
-                            initConnection.query(
-                                "INSERT INTO activities (application_id, candidate_name, action, details, organization_id) VALUES (?, ?, ?, ?, ?)",
-                                act,
-                                () => resolve()
-                            );
-                        });
-                    }
+                        // 6. Seed Notifications
+                        const notifications = [
+                            ["hr@gmail.com", "INTERVIEW_SCHEDULED", "HIGH", "Interview Scheduled", "Technical Interview for Sarah Connor with HR Manager on 2026-07-15 10:00 AM"],
+                            ["hr@gmail.com", "CANDIDATE_APPLIED", "NORMAL", "New Candidate Application", "David Miller applied for Senior Full-Stack Engineer Requisition."]
+                        ];
+                        for (const n of notifications) {
+                            await new Promise((resolve) => {
+                                initConnection.query(
+                                    "INSERT INTO notifications (user_email, type, priority, title, message) VALUES (?, ?, ?, ?, ?)",
+                                    n,
+                                    () => resolve()
+                                );
+                            });
+                        }
 
-                    // 6. Seed Notifications
-                    const notifications = [
-                        ["hr@gmail.com", "INTERVIEW_SCHEDULED", "HIGH", "Interview Scheduled", "Technical Interview for Sarah Connor with HR Manager on 2026-07-15 10:00 AM"],
-                        ["hr@gmail.com", "CANDIDATE_APPLIED", "NORMAL", "New Candidate Application", "David Miller applied for Senior Full-Stack Engineer Requisition."]
-                    ];
-                    for (const n of notifications) {
-                        await new Promise((resolve) => {
-                            initConnection.query(
-                                "INSERT INTO notifications (user_email, type, priority, title, message) VALUES (?, ?, ?, ?, ?)",
-                                n,
-                                () => resolve()
-                            );
-                        });
+                        // 7. Seed Comments
+                        const comments = [
+                            [1, "application", 1, 2, "John Smith has excellent client-side skills and a robust full-stack project portfolio. Recommended for final panel rounds."]
+                        ];
+                        for (const comment of comments) {
+                            await new Promise((resolve) => {
+                                initConnection.query(
+                                    "INSERT INTO comments (organization_id, resource_type, resource_id, author_id, content) VALUES (?, ?, ?, ?, ?)",
+                                    comment,
+                                    () => resolve()
+                                );
+                            });
+                        }
                     }
-
-                    // 7. Seed Comments
-                    const comments = [
-                        [1, "application", 1, 2, "John Smith has excellent client-side skills and a robust full-stack project portfolio. Recommended for final panel rounds."]
-                    ];
-                    for (const comment of comments) {
-                        await new Promise((resolve) => {
-                            initConnection.query(
-                                "INSERT INTO comments (organization_id, resource_type, resource_id, author_id, content) VALUES (?, ?, ?, ?, ?)",
-                                comment,
-                                () => resolve()
-                            );
-                        });
-                    }
-                }
-            });
+                });
+            }
 
             // Backfill organization_id for existing resource rows
             const tablesToBackfill = ["jobs", "job_descriptions", "applications", "interviews", "activities", "communications"];
@@ -626,24 +673,53 @@ initConnection.connect((err) => {
             console.log("Database and tables initialized successfully.");
             initConnection.end();
             resolveInit();
+        } catch (setupErr) {
+            console.error("FATAL ERROR: Database schema setup failed:", setupErr.message);
+            if (isProduction) {
+                process.exit(1);
+            }
+            resolveInit();
+        }
+    };
+
+    if (isProduction) {
+        console.log("Production database configuration detected. Connecting directly to remote MySQL database...");
+        runSchemaSetup();
+    } else {
+        const dbName = databaseName;
+        initConnection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``, (err) => {
+            if (err) {
+                console.warn("Warning: Failed to create database (might already exist or lack privileges):", err.message);
+            }
+
+            initConnection.query(`USE \`${dbName}\``, (err) => {
+                if (err) {
+                    console.error("Failed to select database:", err.message);
+                    initConnection.end();
+                    resolveInit();
+                    return;
+                }
+                runSchemaSetup();
+            });
         });
-    });
+    }
 });
 
 // Create and export the pool configured with the database
 let pool;
+const poolConnectionLimit = process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT) : 5;
 if (connectionUrl) {
     try {
         const parsedUrl = new URL(connectionUrl);
         pool = mysql.createPool({
             host: parsedUrl.hostname,
-            user: parsedUrl.username,
+            user: decodeURIComponent(parsedUrl.username),
             password: decodeURIComponent(parsedUrl.password),
             port: parsedUrl.port ? parseInt(parsedUrl.port) : 3306,
             database: databaseName,
             ...sslOptions,
             waitForConnections: true,
-            connectionLimit: 10,
+            connectionLimit: poolConnectionLimit,
             queueLimit: 0
         });
     } catch (e) {
@@ -656,7 +732,7 @@ if (connectionUrl) {
         ...sslOptions,
         database: databaseName,
         waitForConnections: true,
-        connectionLimit: 10,
+        connectionLimit: poolConnectionLimit,
         queueLimit: 0
     });
 }

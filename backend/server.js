@@ -273,6 +273,23 @@ app.get("/health", (req, res) => {
     });
 });
 
+app.get("/health/db", (req, res) => {
+    const db = require("./config/db");
+    db.query("SELECT 1", (err) => {
+        if (err) {
+            console.error("Database health check failed:", err.message);
+            return res.status(503).json({
+                status: "error",
+                database: "unavailable"
+            });
+        }
+        res.status(200).json({
+            status: "ok",
+            database: "connected"
+        });
+    });
+});
+
 // ====================
 // Home Route
 // ====================
