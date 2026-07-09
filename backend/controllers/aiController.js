@@ -240,6 +240,11 @@ const runAI = async (req, res) => {
         }
 
         const app = apps[0];
+        if (app.organization_id && app.organization_id !== req.user.organization_id) {
+          console.error(`[AI Screening Failure] [ID: ${reqId}] [Time: ${timestamp}] Access Denied: Application ID ${id} belongs to a different organization.`);
+          return res.status(403).json({ success: false, message: "Access Denied: Cross-organization access blocked." });
+        }
+
         const resumeFile = app.resume_file;
         const jobId = app.job_id;
 
@@ -258,6 +263,11 @@ const runAI = async (req, res) => {
             }
 
             const jd = jds[0];
+            if (jd.organization_id && jd.organization_id !== req.user.organization_id) {
+              console.error(`[AI Screening Failure] [ID: ${reqId}] [Time: ${timestamp}] Access Denied: Job ID ${jobId} belongs to a different organization.`);
+              return res.status(403).json({ success: false, message: "Access Denied: Cross-organization access blocked." });
+            }
+
             const resumePath = path.join(__dirname, "..", "uploads", "resumes", resumeFile);
 
             if (!fs.existsSync(resumePath)) {
@@ -352,6 +362,11 @@ const uploadAndRunAI = async (req, res) => {
         }
 
         const jd = jds[0];
+        if (jd.organization_id && jd.organization_id !== req.user.organization_id) {
+          console.error(`[AI Screening Failure] [ID: ${reqId}] [Time: ${timestamp}] Access Denied: Job ID ${jobId} belongs to a different organization.`);
+          return res.status(403).json({ message: "Access Denied: Cross-organization access blocked." });
+        }
+
         const resumePath = path.join(__dirname, "..", "uploads", "resumes", filename);
 
         try {
@@ -367,8 +382,8 @@ const uploadAndRunAI = async (req, res) => {
             `INSERT INTO applications 
              (candidate_name, email, phone, job_id, resume_file, status, screening_status, match_score, skills_score, 
               experience_score, education_score, matched_skills, missing_skills, additional_skills, 
-              candidate_strengths, review_considerations, ai_summary, recommendation) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              candidate_strengths, review_considerations, ai_summary, recommendation, organization_id) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               "Quick Screen Profile",
               "quick.screen@recruitment.com",
@@ -387,7 +402,8 @@ const uploadAndRunAI = async (req, res) => {
               normalizedAnalysis.strengths,
               normalizedAnalysis.considerations,
               normalizedAnalysis.aiSummary,
-              normalizedAnalysis.recommendation
+              normalizedAnalysis.recommendation,
+              req.user.organization_id
             ],
             (err, result) => {
               if (err) {
