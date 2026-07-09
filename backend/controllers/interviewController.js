@@ -121,7 +121,7 @@ const verifyInterviewAccess = (ivId, req, callback) => {
 
 // CREATE INTERVIEW WITH CONFLICT CHECKING
 const createInterview = (req, res) => {
-    const orgId = req.user.organization_id;
+    const orgId = req.user.organization_id ?? null;
     const payload = normalizeInterviewPayload(req.body);
     const {
         candidate_id,

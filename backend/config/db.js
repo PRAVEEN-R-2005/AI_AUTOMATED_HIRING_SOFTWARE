@@ -337,7 +337,10 @@ initConnection.connect((err) => {
                 "ALTER TABLE interviews ADD COLUMN round VARCHAR(100) DEFAULT 'Technical Interview'",
                 "ALTER TABLE interviews ADD COLUMN duration INT DEFAULT 30",
                 "ALTER TABLE interviews ADD COLUMN meeting_link VARCHAR(500) DEFAULT NULL",
-                "ALTER TABLE interviews ADD COLUMN organization_id INT DEFAULT NULL"
+                "ALTER TABLE interviews ADD COLUMN organization_id INT DEFAULT NULL",
+                "ALTER TABLE interviews MODIFY COLUMN phone VARCHAR(50) DEFAULT NULL",
+                "ALTER TABLE interviews MODIFY COLUMN interviewer VARCHAR(255) DEFAULT NULL",
+                "ALTER TABLE interviews MODIFY COLUMN mode VARCHAR(100) DEFAULT NULL"
             ];
             for (const columnSql of interviewColumns) {
                 await new Promise((resolve) => {

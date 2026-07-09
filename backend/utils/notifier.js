@@ -8,7 +8,7 @@ const createNotification = (email, type, priority, title, message) => {
         INSERT INTO notifications (user_email, type, priority, title, message)
         VALUES (?, ?, ?, ?, ?)
     `;
-    db.query(sql, [email, type, priority || "NORMAL", title, message], (err) => {
+    db.query(sql, [email || "system@hiring.com", type, priority || "NORMAL", title, message], (err) => {
         if (err) console.error("Failed to create backend notification:", err);
     });
 };
