@@ -259,6 +259,7 @@ app.use("/api/comments", commentRoutes);
 
 app.get("/api/health", (req, res) => {
     res.status(200).json({
+        status: "ok",
         success: true,
         message: "Smart ATS backend is running"
     });
@@ -266,6 +267,7 @@ app.get("/api/health", (req, res) => {
 
 app.get("/health", (req, res) => {
     res.status(200).json({
+        status: "ok",
         success: true,
         message: "Smart ATS backend is running"
     });
@@ -309,20 +311,14 @@ app.use((err, req, res, next) => {
 // Start Server
 // ====================
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
 app.listen(
-
     PORT,
-
+    "0.0.0.0",
     () => {
-
         console.log(
-
             `Server running on port ${PORT} - server ready`
-
         );
-
     }
-
 );

@@ -4,6 +4,15 @@ const bcrypt = require("bcryptjs");
 
 const connectionUrl = process.env.DATABASE_URL || process.env.MYSQL_URL || process.env.MYSQLURL;
 
+const useSSL = process.env.DB_SSL === "true" || 
+                (connectionUrl && (
+                    connectionUrl.includes("ssl=") || 
+                    connectionUrl.includes("sslmode=") || 
+                    connectionUrl.includes("tidbcloud") || 
+                    connectionUrl.includes("aiven")
+                ));
+const sslOptions = useSSL ? { ssl: { rejectUnauthorized: true } } : {};
+
 let dbConfig;
 let databaseName = process.env.DB_NAME || "hr_hiring_system";
 let initConfig;
@@ -23,6 +32,7 @@ if (connectionUrl) {
             user: parsedUrl.username,
             password: decodeURIComponent(parsedUrl.password),
             port: parsedUrl.port ? parseInt(parsedUrl.port) : 3306,
+            ...sslOptions
         };
     } catch (e) {
         console.warn("Warning: Could not parse database connection URL for initialization, using connectionUrl directly:", e.message);
@@ -33,8 +43,15 @@ if (connectionUrl) {
         user: process.env.DB_USER || "root",
         password: process.env.DB_PASSWORD || "",
         port: process.env.DB_PORT || 3306,
+        ...sslOptions
     };
-    initConfig = dbConfig;
+    initConfig = process.env.DB_SOCKET_PATH
+        ? {
+            socketPath: process.env.DB_SOCKET_PATH,
+            user: process.env.DB_USER || "root",
+            password: process.env.DB_PASSWORD || "",
+          }
+        : dbConfig;
 }
 
 // Initialize database initialization promise
@@ -614,20 +631,44 @@ initConnection.connect((err) => {
 });
 
 // Create and export the pool configured with the database
-const pool = connectionUrl
-    ? mysql.createPool(connectionUrl)
-    : mysql.createPool({
+let pool;
+if (connectionUrl) {
+    try {
+        const parsedUrl = new URL(connectionUrl);
+        pool = mysql.createPool({
+            host: parsedUrl.hostname,
+            user: parsedUrl.username,
+            password: decodeURIComponent(parsedUrl.password),
+            port: parsedUrl.port ? parseInt(parsedUrl.port) : 3306,
+            database: databaseName,
+            ...sslOptions,
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit: 0
+        });
+    } catch (e) {
+        pool = mysql.createPool(connectionUrl);
+    }
+} else {
+    pool = mysql.createPool({
         ...dbConfig,
+        ...(process.env.DB_SOCKET_PATH ? { socketPath: process.env.DB_SOCKET_PATH } : {}),
+        ...sslOptions,
         database: databaseName,
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0
     });
+}
 
 if (connectionUrl) {
     console.log("Database connected via DATABASE_URL/MYSQL_URL connection string");
 } else {
-    console.log("HOST:", dbConfig.host);
+    if (process.env.DB_SOCKET_PATH) {
+        console.log("SOCKET PATH:", process.env.DB_SOCKET_PATH);
+    } else {
+        console.log("HOST:", dbConfig.host);
+    }
     console.log("USER:", dbConfig.user);
     console.log("DATABASE:", databaseName);
 }
