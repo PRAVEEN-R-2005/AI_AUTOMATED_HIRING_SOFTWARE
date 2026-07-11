@@ -28,3 +28,21 @@ backend/uploads/JD/*
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Maven/Java build outputs
+**/target/
+**/*.class
+
+# IDE files
+**/.settings/
+**/.classpath
+**/.project
+**/.factorypath
+**/.idea/
+**/*.iml
+
+# Local tools and archives
+**/.tools/
+**/*.zip
+**/*.tar.gz
+**/*.tgz

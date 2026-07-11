@@ -286,6 +286,7 @@ const updateApplicationStatus = (req, res) => {
                     
                     // Broadcast pipeline notification using user organization context
                     notifyRecruiters(
+                        req.user.organization_id,
                         "PIPELINE_STAGE_CHANGED",
                         "NORMAL",
                         "Pipeline Stage Transition",
@@ -332,6 +333,7 @@ const shortlistApplication = (req, res) => {
                     if (actErr) console.error("Failed to insert shortlist activity:", actErr);
                     
                     notifyRecruiters(
+                        req.user.organization_id,
                         "PIPELINE_STAGE_CHANGED",
                         "HIGH",
                         "Candidate Shortlisted",

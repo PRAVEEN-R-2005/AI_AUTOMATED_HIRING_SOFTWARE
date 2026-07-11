@@ -288,6 +288,7 @@ const createInterview = (req, res) => {
 
                     // Log Notifications
                     notifyRecruiters(
+                        orgId,
                         "INTERVIEW_SCHEDULED",
                         "HIGH",
                         "New Interview Scheduled",
@@ -371,6 +372,7 @@ const updateInterviewStatus = (req, res) => {
 
             // Log Notifications
             notifyRecruiters(
+                req.user.organization_id,
                 "INTERVIEW_RESCHEDULED",
                 "HIGH",
                 "Interview Booking Updated",
@@ -428,6 +430,7 @@ const submitFeedback = (req, res) => {
 
             // Broadcast pipeline notification
             notifyRecruiters(
+                req.user.organization_id,
                 "FEEDBACK_SUBMITTED",
                 "NORMAL",
                 "Feedback Evaluation Logged",

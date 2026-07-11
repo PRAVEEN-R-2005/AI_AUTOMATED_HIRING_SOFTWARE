@@ -14,10 +14,21 @@ const createNotification = (email, type, priority, title, message) => {
 };
 
 /**
- * Broadcasts a notification to all HR and Admin users (recruiters).
+ * Broadcasts a notification to all HR and Admin users (recruiters) in a specific organization.
  */
-const notifyRecruiters = (type, priority, title, message) => {
-    db.query("SELECT email FROM users WHERE role IN ('HR', 'Admin')", (err, rows) => {
+const notifyRecruiters = (organizationId, type, priority, title, message) => {
+    if (!organizationId) {
+        console.warn("notifyRecruiters called without organizationId");
+        return;
+    }
+    const sql = `
+        SELECT u.email FROM users u
+        INNER JOIN memberships m ON u.id = m.user_id
+        WHERE m.organization_id = ?
+          AND m.status = 'ACTIVE'
+          AND (m.role IN ('HR', 'Admin') OR u.role IN ('HR', 'Admin'))
+    `;
+    db.query(sql, [organizationId], (err, rows) => {
         if (err || !rows) return;
         rows.forEach(user => {
             createNotification(user.email, type, priority, title, message);
