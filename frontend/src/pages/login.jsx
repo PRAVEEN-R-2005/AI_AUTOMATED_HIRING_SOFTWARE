@@ -56,7 +56,7 @@ function Login() {
       ) {
         let role = "Candidate";
         if (normalizedEmail === "admin@gmail.com") role = "Admin";
-        else if (normalizedEmail === "hr@gmail.com") role = "HR";
+        else if (normalizedEmail === "hr@gmail.com") role = "Recruiter";
 
         localStorage.setItem("token", "mock-demo-token");
         localStorage.setItem("role", role);
@@ -116,7 +116,7 @@ function Login() {
       ) {
         let role = "Candidate";
         if (normalizedEmail === "admin@gmail.com") role = "Admin";
-        else if (normalizedEmail === "hr@gmail.com") role = "HR";
+        else if (normalizedEmail === "hr@gmail.com") role = "Recruiter";
 
         localStorage.setItem("token", "mock-demo-token");
         localStorage.setItem("role", role);

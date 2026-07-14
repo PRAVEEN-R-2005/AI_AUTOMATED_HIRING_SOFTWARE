@@ -86,8 +86,11 @@ public class NotificationController {
 
         List<Notification> list = notificationRepository.findByUserEmailOrderByIdDesc(user.getEmail()).stream()
                 .filter(n -> n.getIsRead() != null && !n.getIsRead())
-                .peek(n -> n.setIsRead(true))
                 .collect(Collectors.toList());
+
+        for (Notification n : list) {
+            n.setIsRead(true);
+        }
 
         notificationRepository.saveAll(list);
 

@@ -1,5 +1,6 @@
 package com.ats.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -12,11 +13,13 @@ public class AuditLog {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organization_id", nullable = false)
+    @JoinColumn(name = "organization_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Organization organization;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "actor_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
     private User actor;
 
     @Column(name = "actor_name", nullable = false)

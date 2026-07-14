@@ -34,7 +34,14 @@ public class HrController {
 
     private ScopeResult getCandidateScope(CustomUserDetails user) {
         String role = user.getRole();
-        int orgId = user.getOrganizationId();
+        Integer orgIdObj = user.getOrganizationId();
+        if (orgIdObj == null) {
+            ScopeResult res = new ScopeResult();
+            res.params = new ArrayList<>();
+            res.whereClause = "1=0"; // No org context — return empty results
+            return res;
+        }
+        int orgId = orgIdObj;
         
         ScopeResult res = new ScopeResult();
         res.params = new ArrayList<>();

@@ -1,5 +1,6 @@
 package com.ats.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -13,6 +14,7 @@ public class Invitation {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Organization organization;
 
     @Column(nullable = false)
@@ -26,6 +28,7 @@ public class Invitation {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invited_by", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
     private User invitedBy;
 
     @Column(length = 50)
@@ -66,7 +69,7 @@ public class Invitation {
     public void setInvitedBy(User invitedBy) { this.invitedBy = invitedBy; }
 
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; status = status.toUpperCase(); }
+    public void setStatus(String status) { this.status = status != null ? status.toUpperCase() : null; }
 
     public LocalDateTime getExpiresAt() { return expiresAt; }
     public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }

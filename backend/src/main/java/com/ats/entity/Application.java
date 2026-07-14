@@ -1,5 +1,6 @@
 package com.ats.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -22,6 +23,7 @@ public class Application {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private JobDescription jobDescription;
 
     @Column(name = "resume_file")

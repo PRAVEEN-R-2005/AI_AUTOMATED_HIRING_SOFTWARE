@@ -243,7 +243,7 @@ public class DbConfig {
 
         jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS audit_logs (" +
                 "id INT AUTO_INCREMENT PRIMARY KEY," +
-                "organization_id INT NOT NULL," +
+                "organization_id INT DEFAULT NULL," +
                 "actor_id INT DEFAULT NULL," +
                 "actor_name VARCHAR(255) NOT NULL," +
                 "actor_email VARCHAR(255) NOT NULL," +
@@ -256,7 +256,7 @@ public class DbConfig {
                 "user_agent VARCHAR(255) DEFAULT NULL," +
                 "metadata TEXT DEFAULT NULL," +
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-                "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE," +
+                "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL," +
                 "FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL" +
                 ")");
     }

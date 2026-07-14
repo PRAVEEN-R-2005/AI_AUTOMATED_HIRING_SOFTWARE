@@ -84,7 +84,6 @@ public class AuditLogger {
                 }
             }
 
-            if (finalOrgId == null) finalOrgId = 1;
             if (finalActorEmail == null) finalActorEmail = "system@ats.com";
             if (finalActorName == null) {
                 finalActorName = finalActorEmail.split("@")[0];
@@ -93,7 +92,9 @@ public class AuditLogger {
             String metadataJson = objectMapper.writeValueAsString(cleanMetadata);
 
             AuditLog auditLog = new AuditLog();
-            auditLog.setOrganization(organizationRepository.getReferenceById(finalOrgId));
+            if (finalOrgId != null) {
+                auditLog.setOrganization(organizationRepository.getReferenceById(finalOrgId));
+            }
             if (finalActorId != null) {
                 auditLog.setActor(userRepository.getReferenceById(finalActorId));
             }

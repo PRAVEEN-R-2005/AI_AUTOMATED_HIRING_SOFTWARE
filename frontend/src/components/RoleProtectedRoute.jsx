@@ -4,7 +4,13 @@ function RoleProtectedRoute({
     children,
     allowedRoles
 }) {
+    const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
+
+    // If no token exists, redirect to login regardless of role
+    if (!token) {
+        return <Navigate to="/login" />;
+    }
 
     // Support Recruiter & HR as aliases on frontend too
     let effectiveRole = role;
@@ -25,4 +31,4 @@ function RoleProtectedRoute({
     return <Navigate to="/unauthorized" />;
 }
 
-export default RoleProtectedRoute;
+export default RoleProtectedRoute;

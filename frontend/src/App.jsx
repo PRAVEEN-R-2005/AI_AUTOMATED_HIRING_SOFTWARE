@@ -33,6 +33,7 @@ const ApplyJob = lazy(() => import("./pages/ApplyJob"));
 const MyApplications = lazy(() => import("./pages/MyApplications"));
 const InterviewStatus = lazy(() => import("./pages/InterviewStatus"));
 const Team = lazy(() => import("./pages/Team"));
+const ManageJD = lazy(() => import("./pages/ManageJD"));
 const AccessDenied = lazy(() => import("./pages/AccessDenied"));
 
 // ================= PROTECTED ROUTES =================
@@ -101,7 +102,7 @@ function App() {
                         />
                         <Route
                             path="/manage-jd"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><Jobs /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><ManageJD /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/ai-candidates"
@@ -155,6 +156,20 @@ function App() {
                             path="/interview-status"
                             element={<RoleProtectedRoute allowedRoles={["Candidate"]}><InterviewStatus /></RoleProtectedRoute>}
                         />
+
+                        {/* ================= 404 CATCH-ALL ================= */}
+                        <Route path="*" element={
+                            <div style={{
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                minHeight: "100vh", background: "var(--background, #f8fafc)",
+                                flexDirection: "column", gap: "16px", textAlign: "center"
+                            }}>
+                                <h1 style={{ fontSize: "5rem", fontWeight: "800", color: "var(--primary, #6366f1)", margin: 0 }}>404</h1>
+                                <h2 style={{ color: "var(--text-primary, #1e293b)", margin: 0 }}>Page Not Found</h2>
+                                <p style={{ color: "var(--text-secondary, #64748b)" }}>The page you're looking for doesn't exist.</p>
+                                <a href="/" style={{ color: "var(--primary, #6366f1)", textDecoration: "none", fontWeight: 600 }}>← Back to Home</a>
+                            </div>
+                        } />
 
                     </Routes>
                 </Suspense>
