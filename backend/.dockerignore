@@ -1,0 +1,25 @@
+# Build artifacts
+target/
+
+# Local tool binaries (Windows JDK/Maven)
+.tools/
+
+# Node artifacts (no longer needed for deployment)
+node_modules/
+package.json
+package-lock.json
+
+# IDE and OS files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+backend_startup.log
+
+# Git
+.git/
+.gitignore

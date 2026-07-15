@@ -42,9 +42,8 @@ This guide provides step-by-step instructions to deploy the AI Automated Hiring 
    - **Region**: Select a region close to your database.
    - **Branch**: `main` (or your active production branch)
    - **Root Directory**: `backend`
-   - **Runtime**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
+   - **Runtime**: `Docker`
+   - Render will automatically detect the `Dockerfile` in the `backend/` directory.
    - **Plan**: Select the **Free** plan.
 5. Click **Deploy Web Service**.
 6. Wait for the build and deployment logs to show that the server is running.
@@ -52,20 +51,19 @@ This guide provides step-by-step instructions to deploy the AI Automated Hiring 
 
 ---
 
-## Part 4 — Database Configuration
+## Part 4 — Database & Application Configuration
 
-Configure the database environment variables under **Environment** on the Render dashboard:
-* **Option A: Unified Connection URL (Recommended)**
-  - `DATABASE_URL`: `mysql://user:pass@host:port/dbname`
-  - `DB_SSL`: `true`
+Configure the following environment variables under **Environment** on the Render dashboard:
 
-* **Option B: Separate Parameters**
-  - `DB_HOST`: `your-database-hostname`
-  - `DB_PORT`: `3306` (or provider port)
-  - `DB_USER`: `your-username`
-  - `DB_PASSWORD`: `your-secure-password`
-  - `DB_NAME`: `your-database-name`
-  - `DB_SSL`: `true`
+### Required
+  - `SPRING_DATASOURCE_URL`: `jdbc:mysql://host:port/dbname?useSSL=true`
+  - `SPRING_DATASOURCE_USERNAME`: `your-username`
+  - `SPRING_DATASOURCE_PASSWORD`: `your-secure-password`
+  - `JWT_SECRET`: `your-secure-high-entropy-jwt-secret`
+
+### Optional
+  - `JPA_DDL_AUTO`: `update` (to auto-create tables) or `none` (default)
+  - `APP_DEMO_MODE`: `true` or `false`
 
 ---
 
