@@ -23,9 +23,14 @@ WORKDIR /app
 # Copy the built JAR from the builder stage
 COPY --from=builder /app/target/*.jar app.jar
 
+# Create uploads directory for resume/JD storage
+RUN mkdir -p uploads/resumes uploads/JD
+
 # Render injects PORT at runtime; default to 8080
 ENV PORT=8080
+ENV SPRING_PROFILES_ACTIVE=production
 EXPOSE ${PORT}
 
 # Run the application
 ENTRYPOINT java -jar app.jar --server.port=${PORT}
+

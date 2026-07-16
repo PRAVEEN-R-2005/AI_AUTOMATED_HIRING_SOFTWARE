@@ -23,7 +23,7 @@ public class HealthController {
         ));
     }
 
-    @GetMapping("/api/health/db")
+    @GetMapping({"/health/db", "/api/health/db"})
     public ResponseEntity<?> getDatabaseHealth() {
         try {
             jdbcTemplate.execute("SELECT 1");

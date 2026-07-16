@@ -46,7 +46,7 @@ public class StartupValidator {
         if (isBlank(datasourceUrl)) {
             errors.append("\n  - SPRING_DATASOURCE_URL is not set. "
                     + "Set it in the Render Dashboard under Environment, e.g.: "
-                    + "jdbc:mysql://host:port/dbname?useSSL=true");
+                    + "jdbc:mysql://<TIDB_HOST>:4000/<DATABASE>?sslMode=VERIFY_IDENTITY");
         }
         if (isBlank(datasourceUsername)) {
             errors.append("\n  - SPRING_DATASOURCE_USERNAME is not set.");
