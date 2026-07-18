@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 import Navbar from "../components/Navbar";
@@ -9,9 +9,10 @@ import Sidebar from "../components/Sidebar";
 function ApplyJob() {
 
     const [name, setName] = useState("");
+    const userRole = localStorage.getItem("role");
+    const userEmail = localStorage.getItem("email") || "";
 
-    const [email, setEmail] = useState("");
-
+    const [email, setEmail] = useState(userRole === "Candidate" ? userEmail : "");
     const [phone, setPhone] = useState("");
 
     const [file, setFile] = useState(null);
@@ -25,8 +26,36 @@ function ApplyJob() {
     // =====================
 
     const location = useLocation();
+    const { id } = useParams();
+    const navigate = useNavigate();
 
-    const selectedJob = location.state?.job || JSON.parse(localStorage.getItem("selectedJob"));
+    const [selectedJob, setSelectedJob] = useState(location.state?.job || null);
+
+    useEffect(() => {
+        const fetchJob = async () => {
+            if (!selectedJob) {
+                if (!id) {
+                    navigate("/available-jobs");
+                    return;
+                }
+                try {
+                    const response = await api.get("/api/job-descriptions/open");
+                    const jobs = response.data || [];
+                    const job = jobs.find(j => String(j.jdId || j.id) === String(id));
+                    if (job) {
+                        setSelectedJob(job);
+                    } else {
+                        alert("Job not found");
+                        navigate("/available-jobs");
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch jobs", error);
+                    navigate("/available-jobs");
+                }
+            }
+        };
+        fetchJob();
+    }, [id, selectedJob, navigate]);
 
 
     // =====================
@@ -64,11 +93,11 @@ function ApplyJob() {
 
             const formData = new FormData();
 
-            formData.append("candidate_name", name);
-            formData.append("email", email);
-            formData.append("phone", phone);
+            formData.append("candidate_name", name.trim());
+            formData.append("email", email.trim());
+            formData.append("phone", phone.trim());
 
-            const jobId = selectedJob?.id || selectedJob?.jd_id;
+            const jobId = selectedJob?.jdId || selectedJob?.id || id;
             console.log({ selectedJob, jobId });
 
             if (!jobId) {
@@ -79,6 +108,11 @@ function ApplyJob() {
 
             formData.append("job_id", jobId);
             formData.append("resume_file", file);
+
+            console.log("Submitting application payload:");
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}:`, value);
+            }
 
             const response = await api.post(
                 "/api/applications",
@@ -98,36 +132,31 @@ function ApplyJob() {
 
 
             alert(
-
                 "Application Submitted Successfully"
-
             );
 
-
             setName("");
-
             setEmail("");
-
             setPhone("");
-
             setFile(null);
-
             setLoading(false);
+            
+            navigate("/my-applications");
+
 
         }
 
         catch (error) {
-
-            console.log(error);
-
+            console.log("Submission error:", error.response?.status, error.response?.data);
             setLoading(false);
-
-            alert(
-
-                "Application Submission Failed"
-
-            );
-
+            
+            if (error.response?.status === 403) {
+                alert("Session expired or unauthorized. Please log in again.");
+            } else if (error.response?.status === 401) {
+                alert("Authentication required. Please log in.");
+            } else {
+                alert("Application Submission Failed. Please try again later.");
+            }
         }
 
     };
@@ -321,7 +350,8 @@ function ApplyJob() {
                                             )
 
                                         }
-
+                                        readOnly={userRole === "Candidate"}
+                                        style={userRole === "Candidate" ? { backgroundColor: "#e9ecef", cursor: "not-allowed" } : {}}
                                     />
 
 

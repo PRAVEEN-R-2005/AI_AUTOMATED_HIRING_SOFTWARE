@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import { Card, CardContent } from "../components/ui/Card";
-import { FaUserCircle, FaRobot } from "react-icons/fa";
+import { FaUserCircle } from "react-icons/fa";
 
 function Register() {
   const navigate = useNavigate();

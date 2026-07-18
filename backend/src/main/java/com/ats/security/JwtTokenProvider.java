@@ -39,7 +39,9 @@ public class JwtTokenProvider {
         claims.put("id", id);
         claims.put("role", role);
         claims.put("email", email);
-        claims.put("organization_id", organizationId);
+        if (organizationId != null) {
+            claims.put("organization_id", organizationId);
+        }
 
         return Jwts.builder()
                 .claims(claims)

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../services/api";
 import { useToast } from "../components/ui/Toast";
@@ -9,19 +9,11 @@ import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Select from "../components/ui/Select";
 import Modal from "../components/ui/Modal";
-import Skeleton from "../components/ui/Skeleton";
-import EmptyState from "../components/feedback/EmptyState";
 import {
   FaCalendarAlt,
   FaSearch,
-  FaFileDownload,
-  FaRobot,
   FaCheck,
   FaTimes,
-  FaUserCircle,
-  FaClock,
-  FaExchangeAlt,
-  FaMapMarkerAlt,
   FaVideo,
   FaStar,
   FaFolderOpen,
@@ -486,8 +478,8 @@ function Interviews() {
                       <span>No scheduled bookings match your selectors.</span>
                     </div>
                   ) : (
-                    filteredInterviews.map((iv) => (
-                      <Card key={iv.id} className="border-custom shadow-sm" style={{ backgroundColor: "rgba(30, 41, 59, 0.3)" }}>
+                    filteredInterviews.map((iv, index) => (
+                      <Card key={iv.id || `iv-fallback-${index}`} className="border-custom shadow-sm" style={{ backgroundColor: "rgba(30, 41, 59, 0.3)" }}>
                         <CardContent className="p-4 text-start">
                           <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
                             <div>

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, lazy, Suspense } from "react";
 
 // ================= STYLES =================
@@ -106,19 +106,19 @@ function App() {
                         />
                         <Route
                             path="/ai-candidates"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><AICandidates /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter"]}><AICandidates /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/interviews"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager", "Interviewer"]}><Interviews /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter", "Hiring Manager", "Interviewer"]}><Interviews /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/top-candidates"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><TopCandidates /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter", "Hiring Manager"]}><TopCandidates /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/analytics"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><Analytics /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter", "Hiring Manager"]}><Analytics /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/notifications"
@@ -126,7 +126,7 @@ function App() {
                         />
                         <Route
                             path="/team"
-                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><Team /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter"]}><Team /></RoleProtectedRoute>}
                         />
 
                         {/* ================= SETTINGS (ALL ROLES) ================= */}
@@ -145,8 +145,12 @@ function App() {
                             element={<RoleProtectedRoute allowedRoles={["Candidate"]}><AvailableJobs /></RoleProtectedRoute>}
                         />
                         <Route
-                            path="/apply-job"
+                            path="/apply-job/:id"
                             element={<RoleProtectedRoute allowedRoles={["Candidate"]}><ApplyJob /></RoleProtectedRoute>}
+                        />
+                        <Route
+                            path="/apply-job"
+                            element={<Navigate to="/available-jobs" replace />}
                         />
                         <Route
                             path="/my-applications"

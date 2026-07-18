@@ -4,6 +4,8 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Validates that all required environment variables are set at startup.
@@ -13,6 +15,8 @@ import org.springframework.core.annotation.Order;
 @Configuration
 @Order(0)
 public class StartupValidator {
+
+    private static final Logger log = LoggerFactory.getLogger(StartupValidator.class);
 
     @Value("${spring.datasource.url:}")
     private String datasourceUrl;
@@ -31,15 +35,15 @@ public class StartupValidator {
 
     @PostConstruct
     public void validateEnvironment() {
-        System.out.println("========================================");
-        System.out.println("  ATS Backend — Startup Environment Check");
-        System.out.println("========================================");
-        System.out.println("  PORT        = " + serverPort);
-        System.out.println("  DB URL      = " + (isBlank(datasourceUrl) ? "*** NOT SET ***" : maskUrl(datasourceUrl)));
-        System.out.println("  DB Username = " + (isBlank(datasourceUsername) ? "*** NOT SET ***" : datasourceUsername));
-        System.out.println("  DB Password = " + (isBlank(datasourcePassword) ? "*** NOT SET ***" : "****"));
-        System.out.println("  JWT Secret  = " + (isBlank(jwtSecret) ? "*** NOT SET ***" : "****"));
-        System.out.println("========================================");
+        log.info("========================================");
+        log.info("  ATS Backend — Startup Environment Check");
+        log.info("========================================");
+        log.info("  PORT        = {}", serverPort);
+        log.info("  DB URL      = {}", (isBlank(datasourceUrl) ? "*** NOT SET ***" : maskUrl(datasourceUrl)));
+        log.info("  DB Username = {}", (isBlank(datasourceUsername) ? "*** NOT SET ***" : datasourceUsername));
+        log.info("  DB Password = {}", (isBlank(datasourcePassword) ? "*** NOT SET ***" : "****"));
+        log.info("  JWT Secret  = {}", (isBlank(jwtSecret) ? "*** NOT SET ***" : "****"));
+        log.info("========================================");
 
         StringBuilder errors = new StringBuilder();
 
@@ -60,16 +64,15 @@ public class StartupValidator {
         }
 
         if (errors.length() > 0) {
-            System.err.println("==========================================");
-            System.err.println("  FATAL: Missing required environment variables:");
-            System.err.println(errors);
-            System.err.println();
-            System.err.println("  Set these in your Render Dashboard > Environment tab.");
-            System.err.println("==========================================");
+            log.error("==========================================");
+            log.error("  FATAL: Missing required environment variables:");
+            log.error("{}", errors);
+            log.error("  Set these in your Render Dashboard > Environment tab.");
+            log.error("==========================================");
             throw new IllegalStateException("Missing required environment variables." + errors);
         }
 
-        System.out.println("  All required environment variables are present.");
+        log.info("  All required environment variables are present.");
     }
 
     private boolean isBlank(String value) {

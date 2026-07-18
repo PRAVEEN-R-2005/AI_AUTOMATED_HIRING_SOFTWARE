@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
@@ -150,7 +150,7 @@ function Jobs() {
 
       if (editingJob) {
         // Edit Action
-        await api.put(`/api/job-descriptions/${editingJob.jd_id}`, payload);
+        await api.put(`/api/job-descriptions/${editingJob.jdId}`, payload);
         alert("Job Description Updated Successfully");
       } else {
         // Create Action
@@ -169,8 +169,13 @@ function Jobs() {
   };
 
   const handlePublishJob = async (id) => {
+    if (!id) {
+      alert("Invalid Job ID");
+      return;
+    }
     if (!window.confirm("Publish this job description? Active candidates will immediately be able to view and apply.")) return;
     try {
+      console.log(id);
       await api.put(`/api/job-descriptions/publish/${id}`);
       alert("Job Published Successfully");
       fetchJobs();
@@ -214,9 +219,9 @@ function Jobs() {
   };
 
   const handleDeleteJob = async () => {
-    if (!jobToDelete) return;
+    if (!jobToDelete || !jobToDelete.jdId) return;
     try {
-      await api.delete(`/api/job-descriptions/${jobToDelete.jd_id}`);
+      await api.delete(`/api/job-descriptions/${jobToDelete.jdId}`);
       alert("Job Description Deleted Successfully");
       setDeleteOpen(false);
       setJobToDelete(null);
@@ -268,8 +273,8 @@ function Jobs() {
 
     // Sort Logic
     result.sort((a, b) => {
-      if (sortBy === "newest") return b.jd_id - a.jd_id;
-      if (sortBy === "oldest") return a.jd_id - b.jd_id;
+      if (sortBy === "newest") return b.jdId - a.jdId;
+      if (sortBy === "oldest") return a.jdId - b.jdId;
       if (sortBy === "title-asc") return a.title?.localeCompare(b.title);
       if (sortBy === "title-desc") return b.title?.localeCompare(a.title);
       return 0;
@@ -427,14 +432,14 @@ function Jobs() {
         ) : viewMode === "grid" ? (
           /* GRID VIEW */
           <div className="row g-4">
-            {currentItems.map((job) => (
-              <div className="col-md-6 col-lg-4" key={job.jd_id}>
+            {currentItems.map((job, index) => (
+              <div className="col-md-6 col-lg-4" key={job.jdId || job.id || `job-fallback-${index}`}>
                 <Card className="surface-custom border-custom h-100 d-flex flex-column justify-content-between">
                   <CardContent className="p-4 d-flex flex-column gap-3">
                     <div className="d-flex justify-content-between align-items-start">
                       {getStatusBadge(job.status)}
                       <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-                        ID: #{job.jd_id}
+                        ID: #{job.jdId}
                       </div>
                     </div>
 
@@ -486,17 +491,17 @@ function Jobs() {
                     
                     {/* Status Triggers */}
                     {(job.status === "Pending" || !job.status) && (
-                      <Button variant="outline" size="sm" className="btn-custom-sm" onClick={() => handlePublishJob(job.jd_id)}>
+                      <Button variant="outline" size="sm" className="btn-custom-sm" onClick={() => handlePublishJob(job.jdId)}>
                         <FaPlay size={10} className="me-1" /> Publish
                       </Button>
                     )}
                     {job.status === "Open" && (
-                      <Button variant="destructive" size="sm" className="btn-custom-sm" onClick={() => handleCloseJob(job.jd_id)}>
+                      <Button variant="destructive" size="sm" className="btn-custom-sm" onClick={() => handleCloseJob(job.jdId)}>
                         <FaBan size={10} className="me-1" /> Close
                       </Button>
                     )}
                     {job.status === "Closed" && (
-                      <Button variant="outline" size="sm" className="btn-custom-sm" onClick={() => handlePublishJob(job.jd_id)}>
+                      <Button variant="outline" size="sm" className="btn-custom-sm" onClick={() => handlePublishJob(job.jdId)}>
                         Reopen
                       </Button>
                     )}
@@ -526,8 +531,8 @@ function Jobs() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentItems.map((job) => (
-                      <tr key={job.jd_id}>
+                    {currentItems.map((job, index) => (
+                      <tr key={job.jdId || job.id || `job-fallback-${index}`}>
                         <td>
                           <div className="fw-bold text-white">{job.title}</div>
                           <small className="text-muted">By: {job.created_by || "Recruiter"}</small>
@@ -551,17 +556,17 @@ function Jobs() {
                             </Button>
                             
                             {(job.status === "Pending" || !job.status) && (
-                              <Button variant="outline" size="sm" className="btn-custom-sm py-1 px-2" onClick={() => handlePublishJob(job.jd_id)}>
+                              <Button variant="outline" size="sm" className="btn-custom-sm py-1 px-2" onClick={() => handlePublishJob(job.jdId)}>
                                 Publish
                               </Button>
                             )}
                             {job.status === "Open" && (
-                              <Button variant="destructive" size="sm" className="btn-custom-sm py-1 px-2" onClick={() => handleCloseJob(job.jd_id)}>
+                              <Button variant="destructive" size="sm" className="btn-custom-sm py-1 px-2" onClick={() => handleCloseJob(job.jdId)}>
                                 Close
                               </Button>
                             )}
                             {job.status === "Closed" && (
-                              <Button variant="outline" size="sm" className="btn-custom-sm py-1 px-2" onClick={() => handlePublishJob(job.jd_id)}>
+                              <Button variant="outline" size="sm" className="btn-custom-sm py-1 px-2" onClick={() => handlePublishJob(job.jdId)}>
                                 Reopen
                               </Button>
                             )}
@@ -817,12 +822,12 @@ function Jobs() {
         {/* 9. HIRING TEAM ASSIGNMENTS MODAL */}
         {hiringTeamJob && (
           <Modal
-            isOpen={!!hiringTeamJob}
+            isOpen={hiringTeamJob !== null}
             onClose={() => setHiringTeamJob(null)}
             title="Manage Hiring Team"
-            size="lg"
+            size="md"
           >
-            <HiringTeamManager jobId={hiringTeamJob.jd_id} jobTitle={hiringTeamJob.title} />
+            <HiringTeamManager jobId={hiringTeamJob.jdId} jobTitle={hiringTeamJob.title} />
           </Modal>
         )}
 

@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import { useToast } from "../components/ui/Toast";
 import AppLayout from "../components/layout/AppLayout";
-import StatCard from "../components/ui/StatCard";
 import { Card, CardContent } from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Select from "../components/ui/Select";
-import Modal from "../components/ui/Modal";
 import Skeleton from "../components/ui/Skeleton";
 import EmptyState from "../components/feedback/EmptyState";
 import {
@@ -17,9 +15,6 @@ import {
   FaCheckCircle,
   FaExclamationCircle,
   FaLightbulb,
-  FaClock,
-  FaSearch,
-  FaFileAlt,
   FaArrowRight,
   FaTimesCircle,
   FaCheck,
@@ -62,7 +57,7 @@ function AICandidates() {
       
       // Auto-select first job if present
       if (jobsRes.data?.length > 0) {
-        setSelectedJobId(jobsRes.data[0].jd_id);
+        setSelectedJobId(jobsRes.data[0].jdId);
       }
     } catch (err) {
       console.warn("Failed to load AI page data:", err);
@@ -246,7 +241,7 @@ function AICandidates() {
     .filter(app => getOverallFitValue(app) !== null || app.recommendation || app.screening_status === "Completed")
     .sort((a, b) => b.id - a.id);
 
-  const selectedJob = jobs.find(j => Number(j.jd_id) === Number(selectedJobId));
+  const selectedJob = jobs.find(j => Number(j.jdId) === Number(selectedJobId));
 
   return (
     <AppLayout>
@@ -285,7 +280,7 @@ function AICandidates() {
                     <Select
                       value={selectedJobId}
                       onChange={(e) => setSelectedJobId(e.target.value)}
-                      options={jobs.map(j => ({ value: j.jd_id, label: `${j.title} (${j.location})` }))}
+                      options={jobs.map(j => ({ value: j.jdId, label: `${j.title} (${j.location})` }))}
                     />
                   </div>
 
@@ -643,11 +638,11 @@ function AICandidates() {
                       </tr>
                     </thead>
                     <tbody>
-                      {recentAnalyses.slice(0, 5).map((app) => {
+                      {recentAnalyses.slice(0, 5).map((app, index) => {
                         const overallFit = getOverallFitValue(app);
                         const recommendation = getRecommendationValue(app);
                         return (
-                        <tr key={app.id}>
+                        <tr key={app.id || `app-fallback-${index}`}>
                           <td>
                             <div className="fw-bold text-white">{app.candidate_name}</div>
                             <small className="text-muted">{app.email}</small>

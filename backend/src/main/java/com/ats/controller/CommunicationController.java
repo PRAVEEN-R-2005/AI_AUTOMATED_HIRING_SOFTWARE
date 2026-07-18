@@ -78,7 +78,12 @@ public class CommunicationController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Candidate ID, type, and message are required"));
         }
 
-        int candidateId = Integer.parseInt(candIdObj.toString());
+        int candidateId;
+        try {
+            candidateId = Integer.parseInt(candIdObj.toString());
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "candidate_id must be a valid number"));
+        }
 
         Optional<Application> appOpt = applicationRepository.findById(candidateId);
         if (appOpt.isPresent()) {

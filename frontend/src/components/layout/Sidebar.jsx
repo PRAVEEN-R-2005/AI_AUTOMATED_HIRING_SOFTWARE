@@ -1,9 +1,7 @@
-import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import {
   FaTachometerAlt,
-  FaClipboardList,
   FaBriefcase,
   FaFileAlt,
   FaRobot,
@@ -32,14 +30,9 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
   const navItems = {
     Admin: [
       { path: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
-      { path: "/team", label: "Team", icon: <FaUsers /> },
-      { path: "/jobs", label: "Jobs", icon: <FaBriefcase /> },
-      { path: "/applications", label: "Applications", icon: <FaFileAlt /> },
+      { path: "/jobs", label: "Post Job", icon: <FaBriefcase /> },
+      { path: "/applications", label: "Job Listings", icon: <FaFileAlt /> },
       { path: "/candidates", label: "Candidates", icon: <FaUsers /> },
-      { path: "/ai-candidates", label: "AI Candidates", icon: <FaRobot /> },
-      { path: "/interviews", label: "Interviews", icon: <FaCalendarAlt /> },
-      { path: "/top-candidates", label: "Top Candidates", icon: <FaTrophy /> },
-      { path: "/analytics", label: "Analytics", icon: <FaChartBar /> },
       { path: "/notifications", label: "Notifications", icon: <FaBell /> },
       { path: "/settings", label: "Settings", icon: <FaCog /> },
     ],

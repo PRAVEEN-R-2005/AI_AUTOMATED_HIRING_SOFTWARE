@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/ui/Button";
 import { Card, CardContent } from "../components/ui/Card";
@@ -14,8 +14,7 @@ import {
   FaRegQuestionCircle,
   FaTrophy,
   FaChevronDown,
-  FaArrowRight,
-  FaQuoteLeft
+  FaArrowRight
 } from "react-icons/fa";
 
 function Home() {

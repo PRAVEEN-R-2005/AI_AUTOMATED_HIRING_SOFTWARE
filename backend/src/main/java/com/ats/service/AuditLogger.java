@@ -7,17 +7,21 @@ import com.ats.repository.UserRepository;
 import com.ats.security.CustomUserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
-@Transactional
 public class AuditLogger {
+
+    private static final Logger log = LoggerFactory.getLogger(AuditLogger.class);
 
     @Autowired
     private AuditLogRepository auditLogRepository;
@@ -30,6 +34,7 @@ public class AuditLogger {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logEvent(HttpServletRequest request, Integer organizationId, Integer actorId,
                          String actorName, String actorEmail, String eventCategory, String action,
                          String resourceType, Integer resourceId, String result, Map<String, Object> metadata) {
@@ -109,10 +114,10 @@ public class AuditLogger {
             auditLog.setUserAgent(finalUa != null ? finalUa.substring(0, Math.min(finalUa.length(), 255)) : null);
             auditLog.setMetadata(metadataJson);
 
-            auditLogRepository.save(auditLog);
+            auditLogRepository.saveAndFlush(auditLog);
         } catch (Exception e) {
-            System.err.println("CRITICAL: Failed to write audit event log: " + e.getMessage());
-            e.printStackTrace();
+            log.error("CRITICAL: Failed to write audit event log: action={}, resource={}, resourceId={}",
+                    action, resourceType, resourceId, e);
         }
     }
 }

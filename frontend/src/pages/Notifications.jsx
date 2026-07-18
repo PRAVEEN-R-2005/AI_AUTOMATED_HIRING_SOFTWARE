@@ -3,7 +3,7 @@ import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
-import { FaBell, FaCheck, FaCheckDouble, FaFilter, FaTrash, FaExclamationTriangle, FaInfoCircle, FaCalendarAlt } from "react-icons/fa";
+import { FaBell, FaCheck, FaCheckDouble, FaExclamationTriangle, FaInfoCircle, FaCalendarAlt } from "react-icons/fa";
 
 function Notifications() {
     const [notifications, setNotifications] = useState([]);

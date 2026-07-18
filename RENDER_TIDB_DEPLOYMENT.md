@@ -27,7 +27,7 @@ Set these in: **Render Dashboard → Web Service → Environment**
 | `SPRING_DATASOURCE_USERNAME` | *(your TiDB username)* | From TiDB Cloud console |
 | `SPRING_DATASOURCE_PASSWORD` | *(your TiDB password)* | From TiDB Cloud console |
 | `JWT_SECRET` | *(long random string)* | Min 32 chars, e.g. `openssl rand -hex 32` |
-| `SPRING_PROFILES_ACTIVE` | `production` | Already set in render.yaml |
+| `SPRING_PROFILES_ACTIVE` | `prod` | Already set in render.yaml |
 | `FRONTEND_URL` | `https://your-app.vercel.app` | Your Vercel frontend URL |
 | `JPA_DDL_AUTO` | `update` | Auto-creates tables on first deploy |
 | `APP_DEMO_MODE` | `false` | No demo seed data |

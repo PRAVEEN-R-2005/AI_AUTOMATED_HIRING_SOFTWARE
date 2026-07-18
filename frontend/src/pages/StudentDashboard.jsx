@@ -15,7 +15,7 @@ function StudentDashboard() {
             try {
                 const appRes = await api.get(`/api/applications/email/${email}`);
                 const apps = appRes.data || [];
-                const ivRes = await api.get(`/api/interviews/candidate/${email}`);
+                const ivRes = await api.get(`/api/interviews/email/${email}`);
                 const interviews = ivRes.data || [];
 
                 const latest = apps.length > 0 ? apps[apps.length - 1] : null;
@@ -143,9 +143,9 @@ function StudentDashboard() {
                         </div>
                     ) : (
                         <div className="d-flex flex-column gap-2">
-                            {recentApps.map(app => (
+                            {recentApps.map((app, index) => (
                                 <div
-                                    key={app.id}
+                                    key={app.id || `app-fallback-${index}`}
                                     className="d-flex align-items-center justify-content-between p-3"
                                     style={{
                                         background: "var(--background)",

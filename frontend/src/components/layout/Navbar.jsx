@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import PropTypes from "prop-types";
 import { FaBars, FaBell, FaSignOutAlt, FaSun, FaMoon, FaCheck, FaCheckDouble } from "react-icons/fa";
 import Avatar from "../ui/Avatar";
@@ -210,9 +210,9 @@ const Navbar = ({ toggleSidebar }) => {
                     No notifications yet
                   </div>
                 ) : (
-                  notifications.map(notif => (
+                  notifications.map((notif, index) => (
                     <div
-                      key={notif.id}
+                      key={notif.id || `notif-fallback-${index}`}
                       className="d-flex gap-3 p-3"
                       style={{
                         borderBottom: "1px solid var(--border)",

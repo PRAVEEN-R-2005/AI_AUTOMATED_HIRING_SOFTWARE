@@ -1,30 +1,20 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import StatCard from "../components/ui/StatCard";
 import { Card, CardContent } from "../components/ui/Card";
-import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Select from "../components/ui/Select";
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/feedback/ErrorState";
 import Modal from "../components/ui/Modal";
 import {
-  FaChartBar,
-  FaSearch,
   FaFileCsv,
   FaRobot,
-  FaArrowRight,
-  FaCalendarAlt,
   FaFileAlt,
-  FaBriefcase,
-  FaUsers,
-  FaCheckCircle,
-  FaClipboardList,
-  FaInfoCircle,
   FaUniversalAccess
 } from "react-icons/fa";
-import { Doughnut, Line, Bar } from "react-chartjs-2";
+import { Doughnut, Bar } from "react-chartjs-2";
 
 function Analytics() {
   // Datasets
@@ -264,7 +254,7 @@ function Analytics() {
                   onChange={(e) => setFilterJobId(e.target.value)}
                   options={[
                     { value: "All", label: "All Job Descriptions" },
-                    ...jobs.map(j => ({ value: j.jd_id, label: j.title }))
+                    ...jobs.map(j => ({ value: j.jdId, label: j.title }))
                   ]}
                   className="mb-0"
                 />
@@ -456,7 +446,7 @@ function Analytics() {
                     </thead>
                     <tbody>
                       {jobs.map((job) => {
-                        const jobApps = filteredApps.filter(a => Number(a.job_id) === Number(job.jd_id));
+                        const jobApps = filteredApps.filter(a => Number(a.job_id) === Number(job.jdId));
                         const jobHires = jobApps.filter(a => a.status === "Hired").length;
                         const validScores = jobApps.filter(a => a.match_score !== null);
                         const avgScore = validScores.length > 0
@@ -464,7 +454,7 @@ function Analytics() {
                           : "N/A";
 
                         return (
-                          <tr key={job.jd_id}>
+                          <tr key={job.jdId}>
                             <td>{job.title}</td>
                             <td>{jobApps.length}</td>
                             <td>{jobHires}</td>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import Button from "../components/ui/Button";
@@ -7,12 +7,10 @@ import Skeleton from "../components/ui/Skeleton";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import Modal from "../components/ui/Modal";
-import { Card, CardContent } from "../components/ui/Card";
-import StatCard from "../components/ui/StatCard";
 import { 
-  FaCog, FaUser, FaLock, FaUsers, FaPlus, FaTrash, FaCheck, FaExclamationTriangle,
+  FaCog, FaUser, FaLock, FaUsers, FaPlus, FaExclamationTriangle,
   FaPalette, FaBell, FaShieldAlt, FaBuilding, FaServer, FaBrain, FaHistory, FaLink,
-  FaEnvelope, FaCalendarAlt, FaCheckCircle, FaExchangeAlt, FaChevronLeft, FaChevronRight, FaEye
+  FaEnvelope, FaCheckCircle, FaChevronLeft, FaChevronRight, FaEye
 } from "react-icons/fa";
 
 function Settings() {
@@ -1036,8 +1034,8 @@ function Settings() {
                               </tr>
                             </thead>
                             <tbody>
-                              {auditLogs.map(log => (
-                                <tr key={log.id} style={{ borderBottom: "1px solid var(--border)", verticalAlign: "middle" }}>
+                              {auditLogs.map((log, index) => (
+                                <tr key={log.id || `log-fallback-${index}`} style={{ borderBottom: "1px solid var(--border)", verticalAlign: "middle" }}>
                                   <td className="text-muted">{new Date(log.created_at).toLocaleString()}</td>
                                   <td>
                                     <div className="d-flex flex-column text-start">

@@ -95,7 +95,12 @@ public class InterviewController {
         }
 
         String feedback = feedbackObj.toString();
-        int rating = Integer.parseInt(ratingObj.toString());
+        int rating;
+        try {
+            rating = Integer.parseInt(ratingObj.toString());
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "rating must be a valid number"));
+        }
 
         Interview iv = interviewService.submitFeedback(id, feedback, rating, user);
 

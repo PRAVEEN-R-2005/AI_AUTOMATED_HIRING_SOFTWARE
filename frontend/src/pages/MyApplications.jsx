@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import Badge from "../components/ui/Badge";
-import { FaFileAlt, FaCheckCircle, FaSearch, FaEye, FaDownload } from "react-icons/fa";
+import { FaFileAlt, FaCheckCircle, FaSearch, FaEye } from "react-icons/fa";
 
 const PIPELINE_STAGES = ["Pending", "Screening", "Shortlisted", "Interview", "Hired"];
 
@@ -122,13 +122,13 @@ function MyApplications() {
                     </div>
                 ) : (
                     <div className="d-flex flex-column gap-3">
-                        {filtered.map(app => {
+                        {filtered.map((app, index) => {
                             const stageIdx = getStageIndex(app.status);
                             const isRejected = app.status === "Rejected";
 
                             return (
                                 <div
-                                    key={app.id}
+                                    key={app.id || `app-fallback-${index}`}
                                     className="card-custom surface-custom border-custom p-4"
                                     style={{
                                         borderRadius: "var(--radius-md)",

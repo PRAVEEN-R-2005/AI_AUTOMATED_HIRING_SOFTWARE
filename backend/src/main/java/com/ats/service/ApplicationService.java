@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class ApplicationService {
+
+    private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
 
     @Autowired
     private ApplicationRepository applicationRepository;
@@ -51,7 +55,7 @@ public class ApplicationService {
                 file.delete();
             }
         } catch (Exception e) {
-            System.err.println("Error deleting file: " + e.getMessage());
+            log.error("Error deleting file: {}", e.getMessage(), e);
         }
     }
 
@@ -106,7 +110,7 @@ public class ApplicationService {
 
         Application app = new Application();
         app.setCandidateName(candidateName);
-        app.setEmail(email);
+        app.setEmail(email != null ? email.trim() : null);
         app.setPhone(phone);
         app.setJobDescription(jd);
         app.setResumeFile(fileName);
@@ -115,6 +119,10 @@ public class ApplicationService {
         app.setScreeningStatus("PENDING");
 
         app = applicationRepository.save(app);
+
+        // Notify recruiters of new application
+        notifier.notifyRecruiters(orgId, "NEW_APPLICATION", "NORMAL", "New Application Received",
+                String.format("Candidate %s has applied for the job: %s", candidateName, jd.getTitle()));
 
         auditLogger.logEvent(request, orgId, user.getId(), candidateName, email,
                 "APPLICATION", "APPLICATION_STATUS_CHANGED", "APPLICATION", app.getId(), "SUCCESS", Map.of("status", "Pending", "job_id", jobId));

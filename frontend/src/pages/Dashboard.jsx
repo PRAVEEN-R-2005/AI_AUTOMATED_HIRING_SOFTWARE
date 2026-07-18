@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import StatCard from "../components/ui/StatCard";
@@ -7,7 +7,6 @@ import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Skeleton from "../components/ui/Skeleton";
 import EmptyState from "../components/feedback/EmptyState";
-import ErrorState from "../components/feedback/ErrorState";
 import { useNavigate } from "react-router-dom";
 import {
   FaBriefcase,
@@ -16,9 +15,7 @@ import {
   FaTrophy,
   FaPlus,
   FaRobot,
-  FaFileAlt,
   FaClock,
-  FaChartBar,
   FaRegCheckCircle
 } from "react-icons/fa";
 
@@ -35,7 +32,7 @@ import {
   Filler
 } from "chart.js";
 
-import { Doughnut, Line, Bar } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 
 ChartJS.register(
   ArcElement,
@@ -289,17 +286,19 @@ function Dashboard() {
               {getGreeting()}, {getRecruiterName()}
             </h2>
             <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
-              {getFormattedDate()} | Manage hiring, screen applications, and coordinate interviews.
+              {getFormattedDate()} | {isRoleAdmin ? 'Manage hiring, post jobs, and review candidates.' : 'Manage hiring, screen applications, and coordinate interviews.'}
             </p>
           </div>
           <div className="d-flex align-items-center gap-2">
-            <Button
-              variant="outline"
-              className="text-white border-secondary"
-              onClick={() => navigate("/ai-candidates")}
-            >
-              <FaRobot size={14} className="me-1" /> AI Screen
-            </Button>
+            {!isRoleAdmin && (
+              <Button
+                variant="outline"
+                className="text-white border-secondary"
+                onClick={() => navigate("/ai-candidates")}
+              >
+                <FaRobot size={14} className="me-1" /> AI Screen
+              </Button>
+            )}
             <Button
               variant="primary"
               onClick={() => navigate(isRoleAdmin ? "/manage-jd" : "/jobs")}
@@ -460,8 +459,8 @@ function Dashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {stats.recentApplications.slice(0, 5).map((app) => (
-                          <tr key={app.id}>
+                        {stats.recentApplications.slice(0, 5).map((app, index) => (
+                          <tr key={app.id || `app-fallback-${index}`}>
                             <td>
                               <div className="fw-bold text-white">{app.candidate_name}</div>
                               <small className="text-muted">{app.email}</small>
@@ -500,9 +499,11 @@ function Dashboard() {
               <CardContent className="p-4">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h5 className="fw-bold mb-0">Upcoming Interviews</h5>
-                  <Button variant="ghost" size="sm" className="text-primary text-decoration-none" onClick={() => navigate("/interviews")}>
-                    View Calendar
-                  </Button>
+                  {!isRoleAdmin && (
+                    <Button variant="ghost" size="sm" className="text-primary text-decoration-none" onClick={() => navigate("/interviews")}>
+                      View Calendar
+                    </Button>
+                  )}
                 </div>
 
                 {loading ? (
@@ -517,8 +518,8 @@ function Dashboard() {
                   />
                 ) : (
                   <div className="d-flex flex-column gap-3">
-                    {stats.upcomingInterviews.slice(0, 3).map((int) => (
-                      <div key={int.id} className="p-3 rounded border border-secondary border-opacity-10 bg-dark bg-opacity-20 d-flex flex-column gap-2">
+                    {stats.upcomingInterviews.slice(0, 3).map((int, index) => (
+                      <div key={int.id || `int-fallback-${index}`} className="p-3 rounded border border-secondary border-opacity-10 bg-dark bg-opacity-20 d-flex flex-column gap-2">
                         <div className="d-flex justify-content-between align-items-center">
                           <strong className="text-white">{int.candidate_name}</strong>
                           <span className="badge bg-secondary text-white-50" style={{ fontSize: "0.7rem" }}>{int.mode}</span>
@@ -558,8 +559,8 @@ function Dashboard() {
                   />
                 ) : (
                   <div className="d-flex flex-column gap-2">
-                    {stats.topMatchedCandidates.slice(0, 3).map((candidate) => (
-                      <div key={candidate.id} className="p-3 rounded border border-secondary border-opacity-5 d-flex align-items-center justify-content-between">
+                    {stats.topMatchedCandidates.slice(0, 3).map((candidate, index) => (
+                      <div key={candidate.id || `candidate-fallback-${index}`} className="p-3 rounded border border-secondary border-opacity-5 d-flex align-items-center justify-content-between">
                         <div>
                           <strong className="text-white d-block">{candidate.candidate_name}</strong>
                           <small className="text-muted">{candidate.job_title}</small>
@@ -603,8 +604,8 @@ function Dashboard() {
                   />
                 ) : (
                   <div className="d-flex flex-column gap-2">
-                    {stats.activeJobsList.slice(0, 3).map((job) => (
-                      <div key={job.id} className="p-3 rounded border border-secondary border-opacity-5 d-flex align-items-center justify-content-between">
+                    {stats.activeJobsList.slice(0, 3).map((job, index) => (
+                      <div key={job.id || `job-fallback-${index}`} className="p-3 rounded border border-secondary border-opacity-5 d-flex align-items-center justify-content-between">
                         <div>
                           <strong className="text-white d-block">{job.title}</strong>
                           <small className="text-muted">{job.location} | {job.experience}</small>

@@ -9,9 +9,13 @@ import java.io.File;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class AiScreeningService {
+
+    private static final Logger log = LoggerFactory.getLogger(AiScreeningService.class);
 
     private static final List<String> COMMON_TECH_SKILLS = Arrays.asList(
             "python", "javascript", "java", "c++", "c#", "php", "ruby", "go", "rust", "typescript",
@@ -36,7 +40,7 @@ public class AiScreeningService {
     }
 
     public ScreeningResult analyzeResumeAgainstJD(String resumePath, String jdTitle, String jdSkillsRaw, String jdDescription) throws Exception {
-        System.out.println("[AI Screening] Starting resume analysis for path: " + resumePath);
+        log.info("[AI Screening] Starting resume analysis for path: {}", resumePath);
 
         // STAGE 1: Read PDF Buffer & parse text
         String resumeText = "";

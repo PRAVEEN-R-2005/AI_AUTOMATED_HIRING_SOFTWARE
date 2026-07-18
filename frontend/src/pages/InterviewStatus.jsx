@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import { Card, CardContent } from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
-import EmptyState from "../components/feedback/EmptyState";
 import {
-  FaCalendarAlt,
   FaVideo,
   FaFolderOpen
 } from "react-icons/fa";
@@ -73,8 +71,8 @@ function InterviewStatus() {
                     </tr>
                   </thead>
                   <tbody>
-                    {interviews.map((iv) => (
-                      <tr key={iv.id}>
+                    {interviews.map((iv, index) => (
+                      <tr key={iv.id || `iv-fallback-${index}`}>
                         <td>
                           <strong className="text-primary-light">{iv.round || "Technical Interview"}</strong>
                           <small className="text-muted d-block" style={{ fontSize: "0.75rem" }}>ID: #{iv.id}</small>

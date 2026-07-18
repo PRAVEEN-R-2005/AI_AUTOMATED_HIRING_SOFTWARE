@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import StatCard from "../components/ui/StatCard";
@@ -14,12 +14,9 @@ import {
   FaSearch,
   FaFileDownload,
   FaRobot,
-  FaCheck,
-  FaTimes,
   FaUserCircle,
   FaExclamationTriangle,
   FaCheckCircle,
-  FaExternalLinkAlt,
   FaExchangeAlt
 } from "react-icons/fa";
 
@@ -47,7 +44,6 @@ function TopCandidates() {
 
   // Load jobs and candidate rankings
   const loadData = async () => {
-    setLoading(true);
     try {
       const [jobsRes, hrCandidatesRes] = await Promise.all([
         api.get("/api/job-descriptions"),
@@ -58,7 +54,7 @@ function TopCandidates() {
       
       // Auto-select first job if present
       if (jobsRes.data?.length > 0) {
-        setSelectedJobId(jobsRes.data[0].jd_id);
+        setSelectedJobId(jobsRes.data[0].jdId);
       }
     } catch (err) {
       console.warn("Failed to load ranking dashboard metrics:", err);
@@ -81,7 +77,7 @@ function TopCandidates() {
         // Since we joined applications with job_descriptions to fetch candidates,
         // we can filter candidates by comparing their applied job requisitions or match keys
         // If there's an explicit match, filter it, otherwise check job title
-        const jobObj = jobs.find(j => Number(j.jd_id) === Number(selectedJobId));
+        const jobObj = jobs.find(j => Number(j.jdId) === Number(selectedJobId));
         return jobObj ? c.job_title === jobObj.title : true;
       });
     }
@@ -219,7 +215,7 @@ function TopCandidates() {
     return <Badge variant="warning">Pending Review</Badge>;
   };
 
-  const selectedJob = jobs.find(j => Number(j.jd_id) === Number(selectedJobId));
+  const selectedJob = jobs.find(j => Number(j.jdId) === Number(selectedJobId));
 
   return (
     <AppLayout>
@@ -250,7 +246,7 @@ function TopCandidates() {
                   onChange={(e) => { setSelectedJobId(e.target.value); setSelectedIds([]); }}
                   options={[
                     { value: "All", label: "All Job Requisitions" },
-                    ...jobs.map(j => ({ value: j.jd_id, label: j.title }))
+                    ...jobs.map(j => ({ value: j.jdId, label: j.title }))
                   ]}
                   className="mb-0"
                 />
@@ -342,9 +338,9 @@ function TopCandidates() {
                   </thead>
                   <tbody>
                     {sortedCandidates.map((candidate, index) => {
-                      const isChecked = selectedIds.includes(candidate.id);
+                      const isChecked = comparedCandidates.some(c => c.id === candidate.id);
                       return (
-                        <tr key={candidate.id} className={isChecked ? "table-active" : ""}>
+                        <tr key={candidate.id || `candidate-fallback-${index}`} className={isChecked ? "table-active" : ""}>
                           <td>
                             <input
                               type="checkbox"
@@ -414,8 +410,8 @@ function TopCandidates() {
                 <thead>
                   <tr className="bg-dark bg-opacity-30">
                     <th style={{ width: "180px", color: "var(--primary-light)", fontWeight: "bold" }}>Metrics Criteria</th>
-                    {comparedCandidates.map(c => (
-                      <th key={c.id} style={{ minWidth: "220px" }}>
+                    {comparedCandidates.map((c, index) => (
+                      <th key={c.id || `c-fallback-${index}`} style={{ minWidth: "220px" }}>
                         <div className="d-flex align-items-center gap-2">
                           <FaUserCircle size={32} className="text-secondary" />
                           <div>
@@ -431,8 +427,8 @@ function TopCandidates() {
                   {/* Pipeline Action Row */}
                   <tr>
                     <td><strong>Decisions</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <div className="d-flex gap-1.5 flex-wrap">
                           <Button
                             variant="primary"
@@ -460,8 +456,8 @@ function TopCandidates() {
                   {/* Recommendation status */}
                   <tr>
                     <td><strong>Recommendation</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <Badge variant={getScoreBadgeClass(c.match_score)}>
                           {c.recommendation || "Pending Review"}
                         </Badge>
@@ -472,8 +468,8 @@ function TopCandidates() {
                   {/* Overall Fit */}
                   <tr>
                     <td><strong>Overall Match Score</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <div className="d-flex align-items-center gap-2">
                           <div
                             className={`d-flex align-items-center justify-content-center rounded-circle border border-3 border-${getScoreBadgeClass(c.match_score)}`}
@@ -490,8 +486,8 @@ function TopCandidates() {
                   {/* Component breakdowns */}
                   <tr>
                     <td><strong>Skills Match</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <strong className="text-white">{c.skills_score || 0}%</strong>
                         <div className="progress mt-1" style={{ height: "4px" }}>
                           <div className="progress-bar bg-info" style={{ width: `${c.skills_score || 0}%` }}></div>
@@ -502,8 +498,8 @@ function TopCandidates() {
 
                   <tr>
                     <td><strong>Experience Match</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <strong className="text-white">{c.experience_score || 0}%</strong>
                         <div className="progress mt-1" style={{ height: "4px" }}>
                           <div className="progress-bar bg-success" style={{ width: `${c.experience_score || 0}%` }}></div>
@@ -514,8 +510,8 @@ function TopCandidates() {
 
                   <tr>
                     <td><strong>Education Match</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <strong className="text-white">{c.education_score || 0}%</strong>
                         <div className="progress mt-1" style={{ height: "4px" }}>
                           <div className="progress-bar bg-primary" style={{ width: `${c.education_score || 0}%` }}></div>
@@ -527,8 +523,8 @@ function TopCandidates() {
                   {/* Matched Skills */}
                   <tr>
                     <td><strong>Matched Skills</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <div className="d-flex flex-wrap gap-1">
                           {c.matched_skills ? (
                             c.matched_skills.split(",").map((s, idx) => (
@@ -545,8 +541,8 @@ function TopCandidates() {
                   {/* Missing Skills */}
                   <tr>
                     <td><strong>Missing Skill Gaps</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <div className="d-flex flex-wrap gap-1">
                           {c.missing_skills ? (
                             c.missing_skills.split(",").map((s, idx) => (
@@ -563,8 +559,8 @@ function TopCandidates() {
                   {/* Key Strengths */}
                   <tr>
                     <td><strong>Key Strengths</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <ul className="ps-3 mb-0 text-muted" style={{ fontSize: "0.8rem", lineHeight: 1.4 }}>
                           {c.candidate_strengths?.split(" | ").map((s, idx) => (
                             <li key={idx} className="mb-0.5">{s}</li>
@@ -577,8 +573,8 @@ function TopCandidates() {
                   {/* Considerations */}
                   <tr>
                     <td><strong>Review Considerations</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         <ul className="ps-3 mb-0 text-muted" style={{ fontSize: "0.8rem", lineHeight: 1.4 }}>
                           {c.review_considerations?.split(" | ").map((con, idx) => (
                             <li key={idx} className="mb-0.5">{con}</li>
@@ -591,8 +587,8 @@ function TopCandidates() {
                   {/* Resume Download */}
                   <tr>
                     <td><strong>Document</strong></td>
-                    {comparedCandidates.map(c => (
-                      <td key={c.id}>
+                    {comparedCandidates.map((c, index) => (
+                      <td key={c.id || `c-fallback-${index}`}>
                         {c.resume_file ? (
                           <a
                             href={`${api.defaults.baseURL || ""}/uploads/${c.resume_file}`}

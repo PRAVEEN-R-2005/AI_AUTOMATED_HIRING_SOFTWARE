@@ -79,7 +79,7 @@ public class AiController {
             }
             String fileName = UUID.randomUUID().toString() + ext;
             File target = new File(dir, fileName);
-            file.transferTo(target);
+            file.transferTo(target.getAbsoluteFile());
             return fileName;
         } catch (Exception e) {
             e.printStackTrace();
@@ -214,9 +214,16 @@ public class AiController {
         if (analysis.overallScore >= 75) status = "Shortlisted";
         else if (analysis.overallScore < 40) status = "Rejected";
 
+        String origName = resumeFile.getOriginalFilename();
+        String candidateName = "Ad-Hoc Upload";
+        if (origName != null && !origName.isEmpty()) {
+            candidateName = origName.replaceAll("(?i)\\.pdf$", "").replaceAll("[_\\-]", " ");
+        }
+        String generatedEmail = candidateName.replaceAll("\\s+", ".").toLowerCase() + "@uploaded.local";
+
         Application app = new Application();
-        app.setCandidateName("Quick Screen Profile");
-        app.setEmail("quick.screen@recruitment.com");
+        app.setCandidateName(candidateName);
+        app.setEmail(generatedEmail);
         app.setPhone("N/A");
         app.setJobDescription(jd);
         app.setResumeFile(filename);

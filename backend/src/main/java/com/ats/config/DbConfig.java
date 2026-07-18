@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.PostConstruct;
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.Map;
 
 @Configuration
 public class DbConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(DbConfig.class);
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -25,7 +29,7 @@ public class DbConfig {
     @PostConstruct
     public void initDatabase() {
         try {
-            System.out.println("Initializing Database Schemas, Tables and Indices...");
+            log.info("Initializing Database Schemas, Tables and Indices...");
             
             // 1. Create tables
             createTables();
@@ -39,10 +43,9 @@ public class DbConfig {
             // 4. Seeding Demo Org and Users
             seedData();
             
-            System.out.println("Database initialization completed successfully.");
+            log.info("Database initialization completed successfully.");
         } catch (Exception e) {
-            System.err.println("CRITICAL: Database schema setup failed: " + e.getMessage());
-            e.printStackTrace();
+            log.error("CRITICAL: Database schema setup failed: {}", e.getMessage(), e);
         }
     }
 
@@ -298,7 +301,11 @@ public class DbConfig {
         addColumnIfNotExist("jobs", "organization_id", "INT DEFAULT NULL");
         addColumnIfNotExist("jobs", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
 
+        // audit_logs migrations
+        modifyColumnType("audit_logs", "organization_id", "INT DEFAULT NULL");
+
         // users migrations
+
         addColumnIfNotExist("users", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
 
         // job_descriptions migrations
@@ -353,7 +360,7 @@ public class DbConfig {
         if (demoMode) {
             Integer userCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users", Integer.class);
             if (userCount != null && userCount == 0) {
-                System.out.println("Seeding default demo users...");
+                log.info("Seeding default demo users...");
                 
                 Object[][] users = {
                     {"Admin User", "admin@gmail.com", passwordEncoder.encode("admin123"), "Admin", "Admin"},
@@ -393,7 +400,7 @@ public class DbConfig {
 
             Integer jdCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM job_descriptions", Integer.class);
             if (jdCount != null && jdCount == 0) {
-                System.out.println("Seeding default demo jobs, applications, interviews and metadata...");
+                log.info("Seeding default demo jobs, applications, interviews and metadata...");
 
                 jdbcTemplate.update("INSERT INTO job_descriptions (jd_id, title, skills, experience, salary, location, description, created_by, status, organization_id) VALUES " +
                         "(1, 'Senior Full-Stack Engineer', 'React, Node.js, SQL', '5+ years', '$120,000 - $150,000', 'Remote / Hybrid', 'Join our core platform engineering team to build scalable full-stack web applications. You will collaborate on architectural design, implement modular APIs, and maintain high code quality standards.', 'hr@gmail.com', 'Active', 1)");
@@ -441,9 +448,9 @@ public class DbConfig {
         if (count != null && count == 0) {
             try {
                 jdbcTemplate.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDef);
-                System.out.println("Migrated: Added column " + columnName + " to table " + tableName);
+                log.info("Migrated: Added column {} to table {}", columnName, tableName);
             } catch (Exception e) {
-                System.err.println("Warning adding column " + columnName + " to " + tableName + ": " + e.getMessage());
+                log.warn("Warning adding column {} to {}: {}", columnName, tableName, e.getMessage());
             }
         }
     }
@@ -452,7 +459,7 @@ public class DbConfig {
         try {
             jdbcTemplate.execute("ALTER TABLE " + tableName + " MODIFY COLUMN " + columnName + " " + columnDef);
         } catch (Exception e) {
-            System.err.println("Warning modifying column " + columnName + " in " + tableName + ": " + e.getMessage());
+            log.warn("Warning modifying column {} in {}: {}", columnName, tableName, e.getMessage());
         }
     }
 
@@ -462,9 +469,9 @@ public class DbConfig {
         if (count != null && count == 0) {
             try {
                 jdbcTemplate.execute("CREATE INDEX " + indexName + " ON " + tableName + " (" + columns + ")");
-                System.out.println("Migrated: Created index " + indexName + " on table " + tableName);
+                log.info("Migrated: Created index {} on table {}", indexName, tableName);
             } catch (Exception e) {
-                System.err.println("Warning creating index " + indexName + " on " + tableName + ": " + e.getMessage());
+                log.warn("Warning creating index {} on {}: {}", indexName, tableName, e.getMessage());
             }
         }
     }

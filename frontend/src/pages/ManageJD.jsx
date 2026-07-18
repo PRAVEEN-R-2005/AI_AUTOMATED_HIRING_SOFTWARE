@@ -1,9 +1,7 @@
 
 import { useEffect, useState } from "react";
 import api from "../services/api";
-
-import Navbar from "../components/Navbar";
-import Sidebar from "../components/Sidebar";
+import AppLayout from "../components/layout/AppLayout";
 
 function ManageJD() {
 
@@ -38,9 +36,8 @@ function ManageJD() {
         }
 
         catch (error) {
-
-            console.log(error);
-
+            console.error(error);
+            alert(error.response?.data?.message || error.message || "Failed to fetch job descriptions");
         }
 
     };
@@ -83,7 +80,8 @@ function ManageJD() {
             fetchJD();
         }
         catch (error) {
-            console.log(error);
+            console.error(error);
+            alert(error.response?.data?.message || error.message || "Failed to create JD");
         } finally {
             setLoading(false);
         }
@@ -103,7 +101,8 @@ function ManageJD() {
             fetchJD();
         }
         catch (error) {
-            console.log(error);
+            console.error(error);
+            alert(error.response?.data?.message || error.message || "Failed to delete JD");
         } finally {
             setLoading(false);
         }
@@ -121,7 +120,8 @@ const publishJD = async (id) => {
         fetchJD();
     }
     catch (error) {
-        console.log(error);
+        console.error(error);
+        alert(error.response?.data?.message || error.message || "Failed to publish JD");
     } finally {
         setLoading(false);
     }
@@ -140,7 +140,8 @@ const closeJD = async (id) => {
         fetchJD();
     }
     catch (error) {
-        console.log(error);
+        console.error(error);
+        alert(error.response?.data?.message || error.message || "Failed to close JD");
     } finally {
         setLoading(false);
     }
@@ -171,11 +172,7 @@ const closeJD = async (id) => {
 
         <>
 
-            <Navbar />
-
-            <div className="d-flex">
-
-                <Sidebar />
+        <AppLayout>
 
                 <div className="container-fluid p-4">
 
@@ -371,7 +368,7 @@ const closeJD = async (id) => {
 
                                         className="col-md-4"
 
-                                        key={jd.jd_id}
+                                        key={jd.jdId || jd.id}
 
                                     >
 
@@ -395,7 +392,7 @@ const closeJD = async (id) => {
 
                                                 {
 
-                                                    jd.skills
+                                                    (jd.skills || "")
 
                                                     .split(",")
 
@@ -465,7 +462,7 @@ const closeJD = async (id) => {
 
                                                     </b>
 
-                                                    {jd.created_by}
+                                                    {jd.createdBy || jd.created_by}
 
                                                 </p>
                                                 
@@ -518,7 +515,7 @@ Draft
 
 className="btn btn-success me-2"
 
-onClick={()=>publishJD(jd.jd_id)}
+onClick={()=>publishJD(jd.jdId || jd.id)}
 disabled={loading}
 
 >
@@ -532,7 +529,7 @@ Publish
 
 className="btn btn-warning me-2"
 
-onClick={()=>closeJD(jd.jd_id)}
+onClick={()=>closeJD(jd.jdId || jd.id)}
 disabled={loading}
 
 >
@@ -546,7 +543,7 @@ Close
 
 className="btn btn-danger"
 
-onClick={()=>deleteJD(jd.jd_id)}
+onClick={()=>deleteJD(jd.jdId || jd.id)}
 disabled={loading}
 
 >
@@ -571,7 +568,7 @@ Delete
 
                 </div>
 
-            </div>
+            </AppLayout>
 
         </>
 

@@ -28,7 +28,7 @@ RUN mkdir -p uploads/resumes uploads/JD
 
 # Render injects PORT at runtime; default to 8080
 ENV PORT=8080
-ENV SPRING_PROFILES_ACTIVE=production
+ENV SPRING_PROFILES_ACTIVE=prod
 EXPOSE ${PORT}
 
 # Run the application

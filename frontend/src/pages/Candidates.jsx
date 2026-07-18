@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import StatCard from "../components/ui/StatCard";
@@ -16,11 +16,8 @@ import {
   FaSearch,
   FaFileDownload,
   FaUserCircle,
-  FaBriefcase,
-  FaMapMarkerAlt,
   FaRegClipboard,
   FaRobot,
-  FaTrophy,
   FaCheck,
   FaTimes,
   FaChevronRight,
@@ -356,8 +353,8 @@ function Candidates() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentItems.map((candidate) => (
-                      <tr key={candidate.id}>
+                    {currentItems.map((candidate, index) => (
+                      <tr key={candidate.id || `candidate-fallback-${index}`}>
                         <td>
                           <div className="d-flex align-items-center gap-2">
                             <FaUserCircle size={32} className="text-secondary" />

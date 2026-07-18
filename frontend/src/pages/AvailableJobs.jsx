@@ -20,11 +20,11 @@ function AvailableJobs() {
             setTimeout(() => { setJobs(response.data); setLoading(false); }, 0);
         } catch {
             const demoData = [
-                { jd_id: 1, title: "AI Engineer (Python)", skills: "Python, PyTorch, LLMs, NLP", experience: "3+ years", salary: "$120,000 - $150,000", location: "Remote", employment_type: "Full-time" },
-                { jd_id: 2, title: "Frontend Developer", skills: "React, JavaScript, TailwindCSS, HTML", experience: "2+ years", salary: "$80,000 - $100,000", location: "San Francisco, CA", employment_type: "Full-time" },
-                { jd_id: 3, title: "HR Specialist", skills: "Recruiting, Onboarding, Communication", experience: "1+ years", salary: "$60,000 - $75,000", location: "Remote", employment_type: "Part-time" },
-                { jd_id: 4, title: "Data Analyst", skills: "SQL, Python, Tableau, Excel", experience: "2+ years", salary: "$70,000 - $90,000", location: "New York, NY", employment_type: "Full-time" },
-                { jd_id: 5, title: "DevOps Engineer", skills: "AWS, Docker, Kubernetes, CI/CD", experience: "3+ years", salary: "$110,000 - $140,000", location: "Remote", employment_type: "Contract" }
+                { jdId: 1, title: "AI Engineer (Python)", skills: "Python, PyTorch, LLMs, NLP", experience: "3+ years", salary: "$120,000 - $150,000", location: "Remote", employment_type: "Full-time" },
+                { jdId: 2, title: "Frontend Developer", skills: "React, JavaScript, TailwindCSS, HTML", experience: "2+ years", salary: "$80,000 - $100,000", location: "San Francisco, CA", employment_type: "Full-time" },
+                { jdId: 3, title: "HR Specialist", skills: "Recruiting, Onboarding, Communication", experience: "1+ years", salary: "$60,000 - $75,000", location: "Remote", employment_type: "Part-time" },
+                { jdId: 4, title: "Data Analyst", skills: "SQL, Python, Tableau, Excel", experience: "2+ years", salary: "$70,000 - $90,000", location: "New York, NY", employment_type: "Full-time" },
+                { jdId: 5, title: "DevOps Engineer", skills: "AWS, Docker, Kubernetes, CI/CD", experience: "3+ years", salary: "$110,000 - $140,000", location: "Remote", employment_type: "Contract" }
             ];
             setTimeout(() => { setJobs(demoData); setLoading(false); }, 0);
         }
@@ -159,8 +159,8 @@ function AvailableJobs() {
                     </div>
                 ) : (
                     <div className="row g-4">
-                        {filteredJobs.map(job => (
-                            <div className="col-lg-4 col-md-6" key={job.jd_id || job.id}>
+                        {filteredJobs.map((job, index) => (
+                            <div className="col-lg-4 col-md-6" key={job.jdId || job.id || `job-fallback-${index}`}>
                                 <div
                                     className="card-custom surface-custom border-custom p-4 h-100 d-flex flex-column"
                                     style={{
@@ -217,8 +217,10 @@ function AvailableJobs() {
                                         variant="primary"
                                         className="w-100 mt-auto"
                                         onClick={() => {
-                                            localStorage.setItem("selectedJob", JSON.stringify(job));
-                                            navigate("/apply-job", { state: { job } });
+                                            const id = job.jdId || job.id;
+                                            if (id) {
+                                                navigate(`/apply-job/${id}`, { state: { job } });
+                                            }
                                         }}
                                     >
                                         Apply Now

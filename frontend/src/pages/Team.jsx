@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
 import Button from "../components/ui/Button";
@@ -343,8 +343,8 @@ function Team() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredMembers.map(member => (
-                          <tr key={member.membership_id} style={{ borderBottom: "1px solid var(--border)" }}>
+                        {filteredMembers.map((member, index) => (
+                          <tr key={member.membership_id || `member-fallback-${index}`} style={{ borderBottom: "1px solid var(--border)" }}>
                             
                             {/* Member Details */}
                             <td style={{ padding: "12px" }}>
@@ -470,11 +470,11 @@ function Team() {
                   </div>
                 ) : (
                   <div className="d-flex flex-column gap-3 overflow-y-auto" style={{ maxHeight: "400px" }}>
-                    {invitations.map(invite => {
-                      const isExpired = new Date() > new Date(invite.expires_at);
+                    {invitations.map((invite, index) => {
+                      const isExpired = new Date(invite.expires_at) < new Date();
                       return (
                         <div 
-                          key={invite.id} 
+                          key={invite.id || `invite-fallback-${index}`} 
                           className="p-3 text-start"
                           style={{
                             background: "rgba(255,255,255,0.03)",

@@ -35,7 +35,7 @@ public class JobController {
             }
             String fileName = UUID.randomUUID().toString() + ext;
             File target = new File(dir, fileName);
-            file.transferTo(target);
+            file.transferTo(target.getAbsoluteFile());
             return fileName;
         } catch (Exception e) {
             e.printStackTrace();

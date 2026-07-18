@@ -105,7 +105,7 @@ public class JobDescriptionService {
 
         jd = jobDescriptionRepository.save(jd);
 
-        String username = user.getEmail().split("@")[0];
+        String username = user.getEmail() != null ? user.getEmail().split("@")[0] : "system";
         auditLogger.logEvent(request, user.getOrganizationId(), user.getId(), username, user.getEmail(),
                 "JOB", "JOB_UPDATED", "JOB", id, "SUCCESS", Map.of("jobId", id));
 
@@ -116,7 +116,7 @@ public class JobDescriptionService {
         JobDescription jd = verifyOwnership(id, user);
         jobDescriptionRepository.delete(jd);
 
-        String username = user.getEmail().split("@")[0];
+        String username = user.getEmail() != null ? user.getEmail().split("@")[0] : "system";
         auditLogger.logEvent(request, user.getOrganizationId(), user.getId(), username, user.getEmail(),
                 "JOB", "JOB_DELETED", "JOB", id, "SUCCESS", Map.of("jobId", id));
     }
@@ -126,7 +126,7 @@ public class JobDescriptionService {
         jd.setStatus("Open");
         jobDescriptionRepository.save(jd);
 
-        String username = user.getEmail().split("@")[0];
+        String username = user.getEmail() != null ? user.getEmail().split("@")[0] : "system";
         auditLogger.logEvent(request, user.getOrganizationId(), user.getId(), username, user.getEmail(),
                 "JOB", "JOB_PUBLISHED", "JOB", id, "SUCCESS", Map.of("jobId", id));
     }
@@ -136,7 +136,7 @@ public class JobDescriptionService {
         jd.setStatus("Closed");
         jobDescriptionRepository.save(jd);
 
-        String username = user.getEmail().split("@")[0];
+        String username = user.getEmail() != null ? user.getEmail().split("@")[0] : "system";
         auditLogger.logEvent(request, user.getOrganizationId(), user.getId(), username, user.getEmail(),
                 "JOB", "JOB_CLOSED", "JOB", id, "SUCCESS", Map.of("jobId", id));
     }
@@ -200,7 +200,7 @@ public class JobDescriptionService {
 
         jobAssignmentRepository.save(ja);
 
-        String username = user.getEmail().split("@")[0];
+        String username = user.getEmail() != null ? user.getEmail().split("@")[0] : "system";
         auditLogger.logEvent(request, user.getOrganizationId(), user.getId(), username, user.getEmail(),
                 "TEAM", "MEMBER_ASSIGNED", "JOB", jdId, "SUCCESS", Map.of("assignedUserId", userId, "assignedRole", role));
     }
@@ -223,7 +223,7 @@ public class JobDescriptionService {
 
         jobAssignmentRepository.deleteAll(list);
 
-        String username = user.getEmail().split("@")[0];
+        String username = user.getEmail() != null ? user.getEmail().split("@")[0] : "system";
         auditLogger.logEvent(request, user.getOrganizationId(), user.getId(), username, user.getEmail(),
                 "TEAM", "MEMBER_UNASSIGNED", "JOB", jdId, "SUCCESS", Map.of("unassignedUserId", userId));
     }

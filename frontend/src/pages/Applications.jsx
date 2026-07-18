@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import AppLayout from "../components/layout/AppLayout";
@@ -10,13 +10,8 @@ import Select from "../components/ui/Select";
 import Modal from "../components/ui/Modal";
 import Skeleton from "../components/ui/Skeleton";
 import TeamComments from "../components/ui/TeamComments";
-import EmptyState from "../components/feedback/EmptyState";
 import ErrorState from "../components/feedback/ErrorState";
 import {
-  FaBriefcase,
-  FaMapMarkerAlt,
-  FaMoneyBillWave,
-  FaUsers,
   FaSearch,
   FaFileDownload,
   FaUserCircle,
@@ -24,12 +19,9 @@ import {
   FaTimes,
   FaRobot,
   FaCalendarAlt,
-  FaRegClipboard,
   FaFileAlt,
-  FaExchangeAlt,
   FaArrowRight,
   FaArrowLeft,
-  FaEllipsisV,
   FaFolderOpen
 } from "react-icons/fa";
 
@@ -49,7 +41,7 @@ function Applications() {
 
   // Selected job from router redirect (e.g. from Jobs screen)
   const initialJob = location.state?.job || null;
-  const initialJobId = initialJob?.id || initialJob?.jd_id || "All";
+  const initialJobId = initialJob?.id || initialJob?.jdId || "All";
 
   // State
   const [jobs, setJobs] = useState([]);
@@ -268,7 +260,7 @@ function Applications() {
     return activities.filter(act => Number(act.application_id) === Number(id));
   };
 
-  const selectedJob = jobs.find(j => Number(j.jd_id) === Number(filterJobId));
+  const selectedJob = jobs.find(j => Number(j.jdId) === Number(filterJobId));
 
   return (
     <AppLayout>
@@ -330,7 +322,7 @@ function Applications() {
                   onChange={(e) => setFilterJobId(e.target.value)}
                   options={[
                     { value: "All", label: "All Job Requisitions" },
-                    ...jobs.map(j => ({ value: j.jd_id, label: j.title }))
+                    ...jobs.map(j => ({ value: j.jdId, label: j.title }))
                   ]}
                   className="mb-0"
                 />
@@ -416,9 +408,9 @@ function Applications() {
                         <span>No candidates in stage</span>
                       </div>
                     ) : (
-                      stageApps.map(app => (
+                      stageApps.map((app, index) => (
                         <Card
-                          key={app.id}
+                          key={app.id || `app-fallback-${index}`}
                           className={`border-custom shadow-sm transition-all ${updatingStageId === app.id ? "opacity-50" : ""}`}
                           style={{ backgroundColor: "rgba(30, 41, 59, 0.4)" }}
                         >
@@ -515,8 +507,8 @@ function Applications() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredApps.map((app) => (
-                      <tr key={app.id}>
+                    {filteredApps.map((app, index) => (
+                      <tr key={app.id || `app-fallback-${index}`}>
                         <td>
                           <div className="fw-bold text-white">{app.candidate_name}</div>
                           <small className="text-muted">{app.email}</small>

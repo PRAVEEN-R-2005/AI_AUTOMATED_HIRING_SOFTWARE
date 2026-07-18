@@ -7,7 +7,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
-        value: production
+        value: prod
       - key: SPRING_DATASOURCE_URL
         sync: false
       - key: SPRING_DATASOURCE_USERNAME

@@ -9,13 +9,16 @@ import com.ats.repository.MembershipRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Service
 @Transactional
 public class Notifier {
+
+    private static final Logger log = LoggerFactory.getLogger(Notifier.class);
 
     @Autowired
     private NotificationRepository notificationRepository;
@@ -41,7 +44,7 @@ public class Notifier {
 
             notificationRepository.save(notification);
         } catch (Exception e) {
-            System.err.println("Failed to create backend notification: " + e.getMessage());
+            log.error("Failed to create backend notification: {}", e.getMessage(), e);
         }
     }
 
@@ -56,7 +59,7 @@ public class Notifier {
                 createNotification(m.getUser().getEmail(), type, priority, title, message);
             }
         } catch (Exception e) {
-            System.err.println("Failed to notify recruiters: " + e.getMessage());
+            log.error("Failed to notify recruiters: {}", e.getMessage(), e);
         }
     }
 }
