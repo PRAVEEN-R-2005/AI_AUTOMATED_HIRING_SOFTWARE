@@ -106,19 +106,19 @@ function App() {
                         />
                         <Route
                             path="/ai-candidates"
-                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter"]}><AICandidates /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><AICandidates /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/interviews"
-                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter", "Hiring Manager", "Interviewer"]}><Interviews /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager", "Interviewer"]}><Interviews /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/top-candidates"
-                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter", "Hiring Manager"]}><TopCandidates /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><TopCandidates /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/analytics"
-                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter", "Hiring Manager"]}><Analytics /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter", "Hiring Manager"]}><Analytics /></RoleProtectedRoute>}
                         />
                         <Route
                             path="/notifications"
@@ -126,7 +126,7 @@ function App() {
                         />
                         <Route
                             path="/team"
-                            element={<RoleProtectedRoute allowedRoles={["HR", "Recruiter"]}><Team /></RoleProtectedRoute>}
+                            element={<RoleProtectedRoute allowedRoles={["Admin", "HR", "Recruiter"]}><Team /></RoleProtectedRoute>}
                         />
 
                         {/* ================= SETTINGS (ALL ROLES) ================= */}
