@@ -81,6 +81,11 @@ public class CommentService {
             if (!hasInterview) {
                 throw new AccessDeniedException("Access Denied: You do not have scheduled interviews with this candidate");
             }
+        } else if ("Candidate".equalsIgnoreCase(role)) {
+            // BUG-012 FIX: Allow candidates to access comments on their own applications
+            if (app.getEmail() == null || !app.getEmail().equalsIgnoreCase(user.getEmail())) {
+                throw new AccessDeniedException("Access Denied: You do not own this application");
+            }
         } else {
             throw new AccessDeniedException("Access Denied: Invalid role permissions");
         }

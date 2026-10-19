@@ -5,6 +5,8 @@ import com.ats.security.CustomUserDetails;
 import com.ats.security.Permissions;
 import com.ats.service.ApplicationService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/applications")
 public class ApplicationController {
+
+    private static final Logger log = LoggerFactory.getLogger(ApplicationController.class);
 
     @Autowired
     private ApplicationService applicationService;
@@ -76,37 +80,46 @@ public class ApplicationController {
         }
 
         if (candidateName == null || candidateName.trim().isEmpty()) {
-            System.out.println("Validation failed: Candidate name is required");
+            log.warn("Validation failed: Candidate name is required");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Candidate name is required"));
         }
         if (email == null || email.trim().isEmpty()) {
-            System.out.println("Validation failed: Email is required");
+            log.warn("Validation failed: Email is required");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Email is required"));
         }
         if (!email.trim().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-            System.out.println("Validation failed: Invalid email format");
+            log.warn("Validation failed: Invalid email format");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Invalid email format"));
         }
         if (phone == null || phone.trim().isEmpty()) {
-            System.out.println("Validation failed: Phone number is required");
+            log.warn("Validation failed: Phone number is required");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Phone number is required"));
         }
         if (!phone.trim().matches("^\\+?[0-9\\s\\-()]{7,20}$")) {
-            System.out.println("Validation failed: Invalid phone number format");
+            log.warn("Validation failed: Invalid phone number format");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Invalid phone number format. Please provide a valid phone number."));
         }
         if (resumeFile == null || resumeFile.isEmpty()) {
-            System.out.println("Validation failed: Resume file upload is required");
+            log.warn("Validation failed: Resume file upload is required");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Resume file upload is required"));
         }
 
         String fileName = saveResumeFile(resumeFile);
         if (fileName == null) {
-            System.out.println("Validation failed: Failed to save uploaded file");
+            log.warn("Validation failed: Failed to save uploaded file");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Failed to save uploaded file"));
         }
 
-        Application app = applicationService.createApplication(candidateName, email, phone, jobId, fileName, user, request);
+        Application app;
+        try {
+            app = applicationService.createApplication(candidateName, email, phone, jobId, fileName, user, request);
+        } catch (Exception e) {
+            // BUG-001 FIX: clean up the saved resume file if the service fails (e.g. DB constraint violation)
+            File orphan = new File("uploads/resumes/" + fileName);
+            if (orphan.exists()) orphan.delete();
+            log.error("Application creation failed — orphaned file removed: {}", fileName, e);
+            throw e; // rethrow so GlobalExceptionHandler handles it correctly
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "message", "Application Submitted Successfully",

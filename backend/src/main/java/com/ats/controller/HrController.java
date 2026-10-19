@@ -104,13 +104,16 @@ public class HrController {
             Map<String, Object> candidate = results.get(0);
             String role = user.getRole();
 
-            if ("Hiring Manager".equalsIgnoreCase(role)) {
+            if (\"Hiring Manager\".equalsIgnoreCase(role)) {
                 String assignmentCheck = "SELECT id FROM job_assignments WHERE job_id = ? AND user_id = ? AND assigned_role = 'Hiring Manager'";
                 List<Map<String, Object>> checks = jdbcTemplate.queryForList(assignmentCheck, candidate.get("job_id"), user.getId());
                 if (checks.isEmpty()) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Access Denied: You are not assigned to this job"));
                 }
-                return ResponseEntity.ok(results);
+                // BUG-008 FIX: mask recruiter_notes for Hiring Managers (same as Interviewers)
+                Map<String, Object> maskedCandidate = new HashMap<>(candidate);
+                maskedCandidate.put("recruiter_notes", null);
+                return ResponseEntity.ok(Collections.singletonList(maskedCandidate));
             } else if ("Interviewer".equalsIgnoreCase(role)) {
                 String interviewCheck = "SELECT id FROM interviews WHERE (candidate_id = ? OR application_id = ?) AND interviewer = ? AND organization_id = ?";
                 List<Map<String, Object>> checks = jdbcTemplate.queryForList(interviewCheck, id, id, user.getEmail(), user.getOrganizationId());

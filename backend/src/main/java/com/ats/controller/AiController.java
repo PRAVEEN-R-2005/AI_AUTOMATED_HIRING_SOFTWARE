@@ -91,7 +91,7 @@ public class AiController {
     // RUN AI ENGINE FOR EXISTING APPLICATION
     // =====================================
     @PutMapping("/run/{id}")
-    public ResponseEntity<?> runAI(@PathVariable("id") int id, HttpServletRequest request) throws Exception {
+    public ResponseEntity<?> runAI(@PathVariable("id") int id, HttpServletRequest request) {
         CustomUserDetails user = getAuthenticatedUser();
         if (user == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Access Denied"));
@@ -139,12 +139,18 @@ public class AiController {
 
         String resumePath = "uploads/resumes/" + resumeFile;
 
-        ScreeningResult analysis = aiScreeningService.analyzeResumeAgainstJD(
-                resumePath,
-                jd.getTitle(),
-                jd.getSkills(),
-                jd.getDescription()
-        );
+        ScreeningResult analysis;
+        try {
+            analysis = aiScreeningService.analyzeResumeAgainstJD(
+                    resumePath,
+                    jd.getTitle(),
+                    jd.getSkills(),
+                    jd.getDescription()
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "AI analysis failed: " + e.getMessage()));
+        }
 
         String currentStatus = app.getStatus();
         String newStatus = currentStatus;
@@ -179,7 +185,7 @@ public class AiController {
             @RequestParam("jobId") int jobId,
             @RequestParam("resume_file") MultipartFile resumeFile,
             HttpServletRequest request
-    ) throws Exception {
+    ) {
         CustomUserDetails user = getAuthenticatedUser();
         if (user == null || !Permissions.hasPermission(user.getRole(), Permissions.AI_ANALYSIS_RUN)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Access Denied"));
@@ -203,12 +209,18 @@ public class AiController {
 
         String resumePath = "uploads/resumes/" + filename;
 
-        ScreeningResult analysis = aiScreeningService.analyzeResumeAgainstJD(
-                resumePath,
-                jd.getTitle(),
-                jd.getSkills(),
-                jd.getDescription()
-        );
+        ScreeningResult analysis;
+        try {
+            analysis = aiScreeningService.analyzeResumeAgainstJD(
+                    resumePath,
+                    jd.getTitle(),
+                    jd.getSkills(),
+                    jd.getDescription()
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "AI analysis failed: " + e.getMessage()));
+        }
 
         String status = "Pending";
         if (analysis.overallScore >= 75) status = "Shortlisted";

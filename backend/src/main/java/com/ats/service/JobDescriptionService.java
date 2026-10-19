@@ -41,9 +41,12 @@ public class JobDescriptionService {
         }
 
         boolean isOwner = user.getEmail().equalsIgnoreCase(jd.getCreatedBy());
-        boolean isAdmin = "Admin".equalsIgnoreCase(user.getRole());
+        // BUG-014 FIX: Admin, HR, and Recruiter can modify any JD in their org (consistent with JOB_UPDATE permission)
+        boolean isPrivileged = "Admin".equalsIgnoreCase(user.getRole())
+                || "HR".equalsIgnoreCase(user.getRole())
+                || "Recruiter".equalsIgnoreCase(user.getRole());
 
-        if (!isOwner && !isAdmin) {
+        if (!isOwner && !isPrivileged) {
             throw new AccessDeniedException("Access Denied: Unauthorized to modify this resource");
         }
 

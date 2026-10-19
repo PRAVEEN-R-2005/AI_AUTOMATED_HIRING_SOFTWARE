@@ -173,7 +173,7 @@ public class InterviewService {
         // Update candidate status to 'Interview' in applications
         if (applicationId != null) {
             Application app = applicationRepository.findById(applicationId).orElse(null);
-            if (app != null && app.getOrganizationId().equals(orgId)) {
+            if (app != null && orgId.equals(app.getOrganizationId())) {
                 app.setStatus("Interview");
                 applicationRepository.save(app);
 
