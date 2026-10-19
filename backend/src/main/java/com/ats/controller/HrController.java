@@ -104,7 +104,7 @@ public class HrController {
             Map<String, Object> candidate = results.get(0);
             String role = user.getRole();
 
-            if (\"Hiring Manager\".equalsIgnoreCase(role)) {
+            if ("Hiring Manager".equalsIgnoreCase(role)) {
                 String assignmentCheck = "SELECT id FROM job_assignments WHERE job_id = ? AND user_id = ? AND assigned_role = 'Hiring Manager'";
                 List<Map<String, Object>> checks = jdbcTemplate.queryForList(assignmentCheck, candidate.get("job_id"), user.getId());
                 if (checks.isEmpty()) {
